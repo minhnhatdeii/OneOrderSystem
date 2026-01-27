@@ -1,0 +1,58 @@
+# Android/Kotlin Build
+*.iml
+.gradle/
+**/build/
+build/
+local.properties
+**/local.properties
+/.idea/
+**/.idea/
+.DS_Store
+/captures
+.externalNativeBuild
+.cxx
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Kotlin
+*.class
+*.log
+*.ctxt
+
+# Local configuration & Secrets
+local.properties
+**/local.properties
+gradle.properties
+**/gradle.properties
+*.keystore
+!debug.keystore
+*.jks
+
+# Generated files
+bin/
+gen/
+out/
+release/
+
+# Node (if any)
+node_modules/
+
+# IDE
+.idea/
+**/.idea/
+*.swp
+*.swo
+*~
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Supabase local
+.supabase/
+
+# GitHub
+.github/

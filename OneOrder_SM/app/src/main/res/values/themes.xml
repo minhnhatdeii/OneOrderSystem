@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.OneOrder_SM" parent="android:Theme.Material.Light.NoActionBar" />
+    
+    <!-- Splash Screen Theme with Blue Background -->
+    <style name="Theme.OneOrder_SM.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#228BE2</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/logo_oneorder</item>
+        <item name="postSplashScreenTheme">@style/Theme.OneOrder_SM</item>
+    </style>
+</resources>

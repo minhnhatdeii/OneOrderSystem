@@ -1,0 +1,183 @@
+package com.example.oneorder_sm.data.repository
+
+import com.example.oneorder_sm.BuildConfig
+import com.example.oneorder_sm.domain.model.Profile
+import com.example.oneorder_sm.domain.repository.StaffRepository
+import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.gotrue.auth
+import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.rpc
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import javax.inject.Inject
+
+@Serializable
+private data class StaffListItem(
+    val id: String,
+    val full_name: String?,
+    val phone_number: String?,
+    val role: String,
+    val email: String?,
+    val is_active: Boolean,
+    val created_at: String?,
+    val created_by_name: String?
+)
+
+class StaffRepositoryImpl @Inject constructor(
+    private val supabase: SupabaseClient
+) : StaffRepository {
+
+    companion object {
+        const val TEMP_PASSWORD = "123456"
+    }
+
+    override suspend fun getStaffList(): Result<List<Profile>> {
+        return try {
+            // Use the get_tenant_staff function which handles tenant filtering
+            val staffItems = supabase.postgrest.rpc("get_tenant_staff")
+                .decodeList<StaffListItem>()
+            
+            // Convert to Profile objects
+            val profiles = staffItems.map { item ->
+                Profile(
+                    id = item.id,
+                    tenantId = null, // Not returned by function
+                    fullName = item.full_name,
+                    role = item.role,
+                    phoneNumber = item.phone_number,
+                    isActive = item.is_active,
+                    createdAt = item.created_at
+                )
+            }
+            
+            Result.success(profiles)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Creates a staff account by calling Edge Function.
+     * Edge Function will:
+     * 1. Create user with Admin API
+     * 2. Send invitation email
+     * 3. Create profile record
+     */
+    override suspend fun createStaffAccount(
+        email: String,
+        fullName: String,
+        phone: String?,
+        role: String
+    ): Result<String> {
+        return try {
+            // Get current user and tenant info
+            val currentUser = supabase.auth.currentUserOrNull()
+                ?: return Result.failure(Exception("User not authenticated"))
+            
+            val profile = supabase.postgrest.from("profiles")
+                .select {
+                    filter { eq("id", currentUser.id) }
+                }
+                .decodeSingleOrNull<com.example.oneorder_sm.data.model.ProfileWithTenant>()
+            
+            val tenantId = profile?.tenantId
+                ?: return Result.failure(Exception("Manager has no tenant"))
+            
+            // Call Edge Function to create staff account
+            val params = buildJsonObject {
+                put("email", email)
+                put("fullName", fullName)
+                phone?.let { put("phone", it) }
+                put("role", role)
+                put("tenantId", tenantId)
+                put("createdBy", currentUser.id)
+            }
+            
+            // Call Edge Function using Supabase HTTP client
+            val response = supabase.httpClient.post(
+                "${BuildConfig.SUPABASE_URL}/functions/v1/create-staff-account"
+            ) {
+                headers {
+                    append("Authorization", "Bearer ${supabase.auth.currentAccessTokenOrNull()}")
+                    append("Content-Type", "application/json")
+                }
+                setBody(params.toString())
+            }
+            
+            if (response.status.value in 200..299) {
+                Result.success("Tạo tài khoản nhân viên thành công!\n\nEmail: $email\nMật khẩu mặc định: 123456\n\nNhân viên có thể đổi mật khẩu trong Hồ sơ sau khi đăng nhập.")
+            } else {
+                val errorBody = response.bodyAsText()
+                Result.failure(Exception("Failed to create account: $errorBody"))
+            }
+            
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun deactivateStaff(staffId: String): Result<Unit> {
+        return try {
+            val params = buildJsonObject {
+                put("p_staff_id", staffId)
+            }
+            
+            supabase.postgrest.rpc("deactivate_staff", params)
+            
+            Result.success(Unit)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun reactivateStaff(staffId: String): Result<Unit> {
+        return try {
+            val params = buildJsonObject {
+                put("p_staff_id", staffId)
+            }
+            
+            supabase.postgrest.rpc("reactivate_staff", params)
+            
+            Result.success(Unit)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun updateStaff(
+        staffId: String,
+        fullName: String?,
+        phone: String?,
+        role: String?
+    ): Result<Unit> {
+        return try {
+            val updates = buildMap<String, Any> {
+                fullName?.let { put("full_name", it) }
+                phone?.let { put("phone_number", it) }
+                role?.let { put("role", it) }
+            }
+            
+            if (updates.isEmpty()) {
+                return Result.success(Unit)
+            }
+            
+            supabase.postgrest.from("profiles")
+                .update(updates) {
+                    filter { eq("id", staffId) }
+                }
+            
+            Result.success(Unit)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+}
