@@ -11,6 +11,9 @@ import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.gotrue.Auth
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.serializer.KotlinXSerializer
+import io.github.jan.supabase.storage.Storage
+import io.github.jan.supabase.functions.Functions
+import io.github.jan.supabase.realtime.Realtime
 import javax.inject.Singleton
 
 @Module
@@ -33,7 +36,10 @@ object SupabaseModule {
         ) {
             install(Auth)
             install(Postgrest)
-            
+            install(Storage)
+            install(Functions)
+            install(Realtime)
+
             // Configure JSON serializer to ignore unknown keys from database
             // This prevents errors when database has extra fields that models don't need
             defaultSerializer = KotlinXSerializer(
@@ -43,7 +49,7 @@ object SupabaseModule {
                     coerceInputValues = true   // Coerce invalid values to defaults
                 }
             )
-            
+
             Log.d("SupabaseModule", "Supabase client configured with ignoreUnknownKeys = true")
         }
     }

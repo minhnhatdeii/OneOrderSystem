@@ -28,5 +28,23 @@ interface AuthRepository {
      * Returns true if the user is a manager/staff with a tenant_id.
      */
     suspend fun hasTenant(): Boolean
+    
+    /**
+     * Sends a password reset email to the given address.
+     * Uses Supabase's built-in resetPasswordForEmail with redirect to auth-callback.
+     */
+    suspend fun resetPassword(email: String): Result<Unit>
+    
+    /**
+     * Changes the current user's password.
+     * Used when user is already logged in and wants to change their password.
+     */
+    suspend fun changePassword(newPassword: String): Result<Unit>
+
+    /**
+     * Changes password using a recovery token from a password reset email.
+     * This exchanges the one-time recovery token for a session before updating the password.
+     */
+    suspend fun changePasswordWithToken(token: String, newPassword: String): Result<Unit>
 }
 

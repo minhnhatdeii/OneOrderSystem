@@ -27,7 +27,7 @@ class OrderRepositoryImpl @Inject constructor(
             val orders = supabaseClient.postgrest.from("orders_with_details")
                 .select() {
                     filter {
-                         isIn("status", listOf("pending", "confirmed", "preparing", "served"))
+                         isIn("status", listOf("pending", "confirmed", "preparing", "served", "cancelled", "paid"))
                     }
                     order("created_at", order = PostgrestOrder.DESCENDING)
                 }.decodeList<Order>()
@@ -104,6 +104,24 @@ class OrderRepositoryImpl @Inject constructor(
             Log.e("OrderRepository", "Error message: ${e.message}")
             Log.e("OrderRepository", "Stack trace:")
             e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun updateOrderNote(orderId: String, note: String?): Result<Unit> {
+        return try {
+            supabaseClient.postgrest.from("orders").update(
+                {
+                    set("staff_note", note)
+                }
+            ) {
+                filter {
+                    eq("id", orderId)
+                }
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("OrderRepository", "❌ UPDATE NOTE FAILED", e)
             Result.failure(e)
         }
     }

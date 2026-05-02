@@ -133,5 +133,52 @@ class AuthRepositoryImpl @Inject constructor(
         val profile = getCurrentProfile() ?: return false
         return profile.tenantId != null
     }
+    
+    override suspend fun resetPassword(email: String): Result<Unit> {
+        return try {
+            android.util.Log.d("AuthRepository", "Sending password reset email to: $email")
+            val redirectUrl = "${auth.supabaseClient.supabaseUrl}/functions/v1/auth-callback?type=recovery&email=${java.net.URLEncoder.encode(email, "UTF-8")}"
+            auth.resetPasswordForEmail(email, redirectUrl)
+            android.util.Log.d("AuthRepository", "Password reset email sent with redirect to: $redirectUrl")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            android.util.Log.e("AuthRepository", "Failed to send password reset email", e)
+            Result.failure(e)
+        }
+    }
+    
+    override suspend fun changePassword(newPassword: String): Result<Unit> {
+        return try {
+            android.util.Log.d("AuthRepository", "Changing password for current user")
+            auth.updateUser {
+                this.password = newPassword
+            }
+            android.util.Log.d("AuthRepository", "Password changed successfully")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            android.util.Log.e("AuthRepository", "Failed to change password", e)
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun changePasswordWithToken(token: String, newPassword: String): Result<Unit> {
+        return try {
+            android.util.Log.d("AuthRepository", "Exchanging recovery token for session")
+            auth.importAuthToken(
+                accessToken = token,
+                refreshToken = "",
+                retrieveUser = true
+            )
+            android.util.Log.d("AuthRepository", "Session established, updating password")
+            auth.updateUser {
+                this.password = newPassword
+            }
+            android.util.Log.d("AuthRepository", "Password reset with token successful")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            android.util.Log.e("AuthRepository", "Failed to reset password with token", e)
+            Result.failure(e)
+        }
+    }
 }
 

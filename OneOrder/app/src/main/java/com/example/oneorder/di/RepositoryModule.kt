@@ -2,6 +2,10 @@ package com.example.oneorder.di
 
 import com.example.oneorder.data.repository.AuthRepository
 import com.example.oneorder.data.repository.AuthRepositoryImpl
+import com.example.oneorder.data.repository.FollowingRepository
+import com.example.oneorder.data.repository.FollowingRepositoryImpl
+import com.example.oneorder.data.repository.RestaurantProfileRepository
+import com.example.oneorder.data.repository.RestaurantProfileRepositoryImpl
 import com.example.oneorder.data.repository.RestaurantRepository
 import com.example.oneorder.data.repository.RestaurantRepositoryImpl
 import com.example.oneorder.data.repository.TableRepository
@@ -51,4 +55,22 @@ abstract class RepositoryModule {
     abstract fun bindTableRepository(
         tableRepositoryImpl: TableRepositoryImpl
     ): TableRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindRestaurantProfileRepository(
+        restaurantProfileRepositoryImpl: RestaurantProfileRepositoryImpl
+    ): RestaurantProfileRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindFoodFeedRepository(
+        foodFeedRepositoryImpl: com.example.oneorder.data.repository.FoodFeedRepositoryImpl
+    ): com.example.oneorder.data.repository.FoodFeedRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindFollowingRepository(
+        followingRepositoryImpl: FollowingRepositoryImpl
+    ): FollowingRepository
 }

@@ -30,6 +30,7 @@ data class Order(
     val status: OrderStatus,
     @SerialName("payment_status") val paymentStatus: PaymentStatus,
     val note: String? = null, // Customer note for entire order
+    @SerialName("staff_note") val staffNote: String? = null, // Internal staff note
     @SerialName("created_at") val createdAt: String,
     @SerialName("updated_at") val updatedAt: String,
     @SerialName("order_items") val orderItems: List<OrderItem> = emptyList()
@@ -43,5 +44,6 @@ data class OrderItem(
     @SerialName("item_name") val itemName: String? = null,  // Item name for display
     val quantity: Int,
     @SerialName("price_at_time") val priceAtTime: Double,
-    val note: String? = null
+    val note: String? = null,
+    val status: String? = null
 )

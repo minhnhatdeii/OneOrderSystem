@@ -17,6 +17,11 @@ class MainActivity : ComponentActivity() {
     
     private var pendingDeepLink: Uri? = null
     
+    companion object {
+        /** Static deep link state for password reset to be read by navigation */
+        var pendingPasswordResetLink: PasswordResetDeepLink? = null
+    }
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         // Install splash screen before calling super.onCreate
         installSplashScreen()
@@ -53,6 +58,16 @@ class MainActivity : ComponentActivity() {
                     pendingDeepLink = uri
                     // Will be handled by AppNavigation composable
                 }
+                uri.scheme == "oneorder" && uri.host == "password-reset" -> {
+                    android.util.Log.d("MainActivity", "Password reset deep link detected")
+                    val token = uri.getQueryParameter("token")
+                    val email = uri.getQueryParameter("email")
+                    pendingPasswordResetLink = PasswordResetDeepLink(
+                        token = token,
+                        email = email
+                    )
+                    pendingDeepLink = uri
+                }
                 else -> {
                     android.util.Log.w("MainActivity", "Unknown deep link: $uri")
                 }
@@ -60,3 +75,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+/**
+ * Deep link state for password reset
+ */
+data class PasswordResetDeepLink(
+    val token: String? = null,
+    val email: String? = null
+)

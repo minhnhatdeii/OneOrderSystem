@@ -44,3 +44,11 @@ class SubscribeToOrdersUseCase @Inject constructor(
         return repository.subscribeToOrders()
     }
 }
+
+class UpdateOrderNoteUseCase @Inject constructor(
+    private val repository: OrderRepository
+) {
+    suspend operator fun invoke(orderId: String, note: String?): Result<Unit> {
+        return repository.updateOrderNote(orderId, note)
+    }
+}

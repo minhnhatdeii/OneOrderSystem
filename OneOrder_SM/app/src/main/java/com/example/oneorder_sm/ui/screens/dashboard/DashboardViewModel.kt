@@ -3,11 +3,10 @@ package com.example.oneorder_sm.ui.screens.dashboard
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.oneorder_sm.data.model.DashboardSummary
-import com.example.oneorder_sm.data.model.OrderStatistic
-import com.example.oneorder_sm.data.model.PopularItem
+import com.example.oneorder_sm.data.model.Order
+import com.example.oneorder_sm.data.model.OrderStatus
+import com.example.oneorder_sm.domain.repository.OrderRepository
 import com.example.oneorder_sm.domain.usecase.GetDashboardSummaryUseCase
-import com.example.oneorder_sm.domain.usecase.GetOrderStatisticsUseCase
-import com.example.oneorder_sm.domain.usecase.GetPopularItemsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,31 +14,20 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import javax.inject.Inject
-
-enum class DateRange {
-    TODAY,
-    LAST_7_DAYS,
-    LAST_30_DAYS
-}
 
 data class DashboardUiState(
     val isLoading: Boolean = true,
     val error: String? = null,
     val summary: DashboardSummary? = null,
-    val orderStats: List<OrderStatistic> = emptyList(),
-    val popularItems: List<PopularItem> = emptyList(),
-    val selectedDateRange: DateRange = DateRange.LAST_7_DAYS,
+    val recentOrders: List<Order> = emptyList(),
     val lastRefreshTime: Long = System.currentTimeMillis()
 )
 
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
     private val getDashboardSummary: GetDashboardSummaryUseCase,
-    private val getOrderStatistics: GetOrderStatisticsUseCase,
-    private val getPopularItems: GetPopularItemsUseCase
+    private val orderRepository: OrderRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DashboardUiState())
@@ -64,24 +52,33 @@ class DashboardViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
 
             try {
-                // Load summary
+                // Load summary (today's data)
                 val summaryResult = getDashboardSummary()
-                
-                // Calculate date range
-                val (startDate, endDate) = getDateRangeStrings(_uiState.value.selectedDateRange)
-                
-                // Load order statistics
-                val statsResult = getOrderStatistics(startDate, endDate)
-                
-                // Load popular items
-                val popularResult = getPopularItems(10)
+                var summary = summaryResult.getOrNull()
+
+                // Load recent orders (take 5 most recent)
+                val ordersResult = orderRepository.getActiveOrders()
+                val allOrders = ordersResult.getOrNull() ?: emptyList()
+
+                // Recalculate active orders and occupied tables from real-time data
+                if (summary != null) {
+                    val activeOrderList = allOrders.filter { 
+                        it.status == OrderStatus.PENDING ||
+                        it.status == OrderStatus.CONFIRMED ||
+                        it.status == OrderStatus.PREPARING ||
+                        it.status == OrderStatus.SERVED
+                    }
+                    summary = summary.copy(
+                        activeOrders = activeOrderList.size,
+                        occupiedTables = activeOrderList.mapNotNull { it.tableId }.distinct().size
+                    )
+                }
 
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        summary = summaryResult.getOrNull(),
-                        orderStats = statsResult.getOrNull() ?: emptyList(),
-                        popularItems = popularResult.getOrNull() ?: emptyList(),
+                        summary = summary,
+                        recentOrders = allOrders.take(5),
                         lastRefreshTime = System.currentTimeMillis()
                     )
                 }
@@ -98,22 +95,33 @@ class DashboardViewModel @Inject constructor(
 
     fun refreshData() {
         viewModelScope.launch {
-            // Cancel any ongoing auto-refresh cycle temporarily
             _uiState.update { it.copy(isLoading = true, error = null) }
-            
+
             try {
-                // Force immediate load
                 val summaryResult = getDashboardSummary()
-                val (startDate, endDate) = getDateRangeStrings(_uiState.value.selectedDateRange)
-                val statsResult = getOrderStatistics(startDate, endDate)
-                val popularResult = getPopularItems(10)
+                var summary = summaryResult.getOrNull()
+                
+                val ordersResult = orderRepository.getActiveOrders()
+                val allOrders = ordersResult.getOrNull() ?: emptyList()
+
+                if (summary != null) {
+                    val activeOrderList = allOrders.filter { 
+                        it.status == OrderStatus.PENDING ||
+                        it.status == OrderStatus.CONFIRMED ||
+                        it.status == OrderStatus.PREPARING ||
+                        it.status == OrderStatus.SERVED
+                    }
+                    summary = summary.copy(
+                        activeOrders = activeOrderList.size,
+                        occupiedTables = activeOrderList.mapNotNull { it.tableId }.distinct().size
+                    )
+                }
 
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        summary = summaryResult.getOrNull(),
-                        orderStats = statsResult.getOrNull() ?: emptyList(),
-                        popularItems = popularResult.getOrNull() ?: emptyList(),
+                        summary = summary,
+                        recentOrders = allOrders.take(5),
                         lastRefreshTime = System.currentTimeMillis()
                     )
                 }
@@ -126,23 +134,5 @@ class DashboardViewModel @Inject constructor(
                 }
             }
         }
-    }
-
-    fun selectDateRange(range: DateRange) {
-        _uiState.update { it.copy(selectedDateRange = range) }
-        loadDashboardData()
-    }
-
-    private fun getDateRangeStrings(range: DateRange): Pair<String, String> {
-        val formatter = DateTimeFormatter.ISO_LOCAL_DATE
-        val today = LocalDate.now()
-        
-        val (start, end) = when (range) {
-            DateRange.TODAY -> today to today
-            DateRange.LAST_7_DAYS -> today.minusDays(6) to today
-            DateRange.LAST_30_DAYS -> today.minusDays(29) to today
-        }
-        
-        return start.format(formatter) to end.format(formatter)
     }
 }

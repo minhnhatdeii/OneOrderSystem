@@ -18,11 +18,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.oneorder.R
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -60,10 +62,10 @@ fun QRScannerScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Scan QR Code") },
+                title = { Text(stringResource(R.string.scan_qr_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -85,17 +87,17 @@ fun QRScannerScreen(
                         verticalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = "Camera permission is required to scan QR codes",
+                            text = stringResource(R.string.camera_permission_required),
                             style = MaterialTheme.typography.titleMedium,
                             textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = { cameraPermissionState.launchPermissionRequest() }) {
-                            Text("Grant Permission")
+                            Text(stringResource(R.string.grant_permission))
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         TextButton(onClick = onNavigateBack) {
-                            Text("Cancel")
+                            Text(stringResource(R.string.cancel))
                         }
                     }
                 }
@@ -116,7 +118,7 @@ fun QRScannerScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = { viewModel.resetState() }) {
-                            Text("Try Again")
+                            Text(stringResource(R.string.try_again))
                         }
                     }
                 }
@@ -180,7 +182,7 @@ fun CameraPreview(
                 var frameCount = 0
                 imageAnalysis.setAnalyzer(Executors.newSingleThreadExecutor()) { imageProxy ->
                     frameCount++
-                    if (frameCount % 30 == 0) { // Log every 30 frames to avoid spam
+                    if (frameCount % 30 == 0) {
                         Log.d("QRScanner", "Analyzing frame #$frameCount (hasScanned=$hasScanned)")
                     }
                     
@@ -297,7 +299,10 @@ fun ScannerOverlay(
 
             // Instruction text
             Text(
-                text = if (isScanning) "Processing..." else "Position QR code within the frame",
+                text = if (isScanning)
+                    stringResource(R.string.qr_processing)
+                else
+                    stringResource(R.string.qr_position_hint),
                 style = MaterialTheme.typography.titleMedium,
                 color = Color.White,
                 textAlign = TextAlign.Center

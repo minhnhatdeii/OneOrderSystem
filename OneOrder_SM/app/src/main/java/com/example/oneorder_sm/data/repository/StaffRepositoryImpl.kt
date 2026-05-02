@@ -1,11 +1,16 @@
 package com.example.oneorder_sm.data.repository
 
 import com.example.oneorder_sm.BuildConfig
+import com.example.oneorder_sm.domain.model.Attendance
+import com.example.oneorder_sm.domain.model.AttendanceStatus
+import com.example.oneorder_sm.domain.model.DailyNote
 import com.example.oneorder_sm.domain.model.Profile
 import com.example.oneorder_sm.domain.repository.StaffRepository
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.gotrue.auth
+import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.rpc
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -55,6 +60,28 @@ class StaffRepositoryImpl @Inject constructor(
             }
             
             Result.success(profiles)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun getCurrentStaffProfile(): Result<Profile> {
+        return try {
+            val currentUser = supabase.auth.currentUserOrNull()
+                ?: return Result.failure(Exception("User not authenticated"))
+                
+            val profile = supabase.postgrest.from("profiles")
+                .select {
+                    filter { eq("id", currentUser.id) }
+                }
+                .decodeSingleOrNull<Profile>()
+                
+            if (profile != null) {
+                Result.success(profile)
+            } else {
+                Result.failure(Exception("Profile not found"))
+            }
         } catch (e: Exception) {
             e.printStackTrace()
             Result.failure(e)
@@ -173,7 +200,212 @@ class StaffRepositoryImpl @Inject constructor(
                 .update(updates) {
                     filter { eq("id", staffId) }
                 }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun getStaffAttendance(
+        staffId: String,
+        month: Int,
+        year: Int
+    ): Result<List<Attendance>> {
+        return try {
+            val startDate = String.format("%04d-%02d-01", year, month)
+            val nextMonth = if (month == 12) 1 else month + 1
+            val nextYear = if (month == 12) year + 1 else year
+            val endDate = String.format("%04d-%02d-01", nextYear, nextMonth)
+
+            val attendanceItems = supabase.postgrest.from("attendance")
+                .select(Columns.ALL) {
+                    filter {
+                        eq("staff_id", staffId)
+                        gte("attendance_date", startDate)
+                        lt("attendance_date", endDate)
+                    }
+                }
+                .decodeList<Attendance>()
             
+            Result.success(attendanceItems)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun submitAttendance(
+        staffId: String,
+        date: String,
+        checkIn: String,
+        checkOut: String?,
+        status: AttendanceStatus,
+        note: String?
+    ): Result<Unit> {
+        return try {
+            val currentUser = supabase.auth.currentUserOrNull()
+                ?: return Result.failure(Exception("User not authenticated"))
+            
+            val profile = supabase.postgrest.from("profiles")
+                .select {
+                    filter { eq("id", currentUser.id) }
+                }
+                .decodeSingleOrNull<com.example.oneorder_sm.data.model.ProfileWithTenant>()
+            
+            val tenantId = profile?.tenantId
+                ?: return Result.failure(Exception("Has no tenant"))
+
+            val data = Attendance(
+                staffId = staffId,
+                tenantId = tenantId,
+                date = date,
+                checkIn = checkIn,
+                checkOut = checkOut,
+                status = status,
+                note = note
+            )
+
+            supabase.postgrest.from("attendance").insert(data)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun approveAttendance(attendanceId: String): Result<Unit> {
+        return try {
+            supabase.postgrest.from("attendance").update(mapOf("status" to "approved")) {
+                filter { eq("id", attendanceId) }
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun updateAttendanceStatus(attendanceId: String, status: AttendanceStatus): Result<Unit> {
+        return try {
+            supabase.postgrest.from("attendance").update(mapOf("status" to status.name.lowercase())) {
+                filter { eq("id", attendanceId) }
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun updateAttendanceRecord(
+        attendanceId: String,
+        checkIn: String,
+        checkOut: String?,
+        status: AttendanceStatus?
+    ): Result<Unit> {
+        return try {
+            val updates = mutableMapOf<String, Any>(
+                "check_in" to checkIn,
+                "updated_at" to "now()"
+            )
+            checkOut?.let { updates["check_out"] = it }
+            status?.let { updates["status"] = it.name.lowercase() }
+
+            supabase.postgrest.from("attendance").update(updates) {
+                filter { eq("id", attendanceId) }
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+
+    // -------------------------
+    // Daily Note Methods
+    // -------------------------
+
+    override suspend fun getDailyNotes(staffId: String, month: Int, year: Int): Result<List<DailyNote>> {
+        return try {
+            val startDate = String.format("%04d-%02d-01", year, month)
+            val nextMonth = if (month == 12) 1 else month + 1
+            val nextYear = if (month == 12) year + 1 else year
+            val endDate = String.format("%04d-%02d-01", nextYear, nextMonth)
+
+            val notes = supabase.postgrest.from("attendance_daily_notes")
+                .select(Columns.ALL) {
+                    filter {
+                        eq("staff_id", staffId)
+                        gte("note_date", startDate)
+                        lt("note_date", endDate)
+                    }
+                }
+                .decodeList<DailyNote>()
+
+            Result.success(notes)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun upsertDailyNote(staffId: String, noteDate: String, content: String): Result<Unit> {
+        return try {
+            val currentUser = supabase.auth.currentUserOrNull()
+                ?: return Result.failure(Exception("User not authenticated"))
+
+            val profile = supabase.postgrest.from("profiles")
+                .select {
+                    filter { eq("id", currentUser.id) }
+                }
+                .decodeSingleOrNull<com.example.oneorder_sm.data.model.ProfileWithTenant>()
+
+            val tenantId = profile?.tenantId
+                ?: return Result.failure(Exception("Has no tenant"))
+
+            // Kiểm tra xem note đã tồn tại chưa
+            val existing = supabase.postgrest.from("attendance_daily_notes")
+                .select {
+                    filter {
+                        eq("staff_id", staffId)
+                        eq("note_date", noteDate)
+                    }
+                    limit(1)
+                }
+                .decodeSingleOrNull<DailyNote>()
+
+            if (existing != null && existing.id != null) {
+                // Update note hiện có
+                supabase.postgrest.from("attendance_daily_notes").update(
+                    mapOf("content" to content, "updated_at" to "now()")
+                ) {
+                    filter { eq("id", existing.id) }
+                }
+            } else {
+                // Insert note mới
+                val note = DailyNote(
+                    staffId = staffId,
+                    tenantId = tenantId,
+                    noteDate = noteDate,
+                    content = content,
+                    createdBy = currentUser.id
+                )
+                supabase.postgrest.from("attendance_daily_notes").insert(note)
+            }
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun deleteDailyNote(noteId: String): Result<Unit> {
+        return try {
+            supabase.postgrest.from("attendance_daily_notes").delete {
+                filter { eq("id", noteId) }
+            }
             Result.success(Unit)
         } catch (e: Exception) {
             e.printStackTrace()

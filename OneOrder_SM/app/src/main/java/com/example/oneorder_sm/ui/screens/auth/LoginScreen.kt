@@ -12,6 +12,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.oneorder_sm.data.local.LoginPreferences
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -22,7 +25,19 @@ fun LoginScreen(
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var rememberMe by remember { mutableStateOf(false) }
     val loginState by viewModel.loginState.collectAsState()
+
+    // Load saved credentials if available
+    LaunchedEffect(Unit) {
+        viewModel.getSavedCredentials().collectLatest { preferences ->
+            if (preferences.rememberMe && preferences.savedEmail.isNotBlank()) {
+                email = preferences.savedEmail
+                password = preferences.savedPassword
+                rememberMe = true
+            }
+        }
+    }
 
     LaunchedEffect(loginState.isSuccess, loginState.role) {
         if (loginState.isSuccess && loginState.role != null) {
@@ -69,13 +84,32 @@ fun LoginScreen(
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
             )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Remember me checkbox
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = rememberMe,
+                    onCheckedChange = { rememberMe = it }
+                )
+                Text(
+                    text = "Ghi nhớ đăng nhập",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            
             Spacer(modifier = Modifier.height(16.dp))
 
             if (loginState.isLoading) {
                 CircularProgressIndicator()
             } else {
                 Button(
-                    onClick = { viewModel.login(email, password) },
+                    onClick = { viewModel.login(email, password, rememberMe) },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Đăng nhập")

@@ -56,3 +56,54 @@ Thumbs.db
 
 # GitHub
 .github/
+
+# Thesis / Luận văn
+thesis/
+18020319-2309/
+18020319-2309.pdf
+
+# AI Tool Configs & Docs
+CLAUDE.md
+**/CLAUDE.md
+.cursor/
+.gemini/
+
+# Resolved / AI-generated documentation
+*.md.resolved
+RECOMMENDATION_EVALUATION.md
+TUNING_REPORT.md.resolved
+implementation_plan.md.resolved
+food_recommendation_flow.md.resolved
+model_tuning_report.md.resolved
+
+# Dataset & Analysis files
+Dataset_for_print.csv
+interactions.csv
+items.csv
+users.csv
+dataset_report.xlsx
+
+# Utility / Analysis scripts
+analyze_dataset.py
+diagnose_model.py
+generate_excel_report.py
+generate_interactions.py
+prepare_recommendation_data.py
+check_policies.mjs
+clear_cache.mjs
+count.mjs
+evaluate_simulator.mjs
+evaluate_with_dataset.mjs
+gemini_auto_tagging.mjs
+seed_mock_data.mjs
+test_rpc.mjs
+verify_food_posts.mjs
+supabase_recommendation_schema.sql
+
+# Node (root-level only, project uses these for dev scripts)
+package.json
+package-lock.json
+
+# OneOrder misc docs
+OneOrder/docs/
+OneOrder/out.txt

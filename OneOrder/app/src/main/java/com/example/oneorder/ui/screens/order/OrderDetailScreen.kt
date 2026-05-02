@@ -13,10 +13,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.example.oneorder.R
 import com.example.oneorder.data.model.OrderItemWithDetails
 import com.example.oneorder.utils.CurrencyFormatter
 import java.text.SimpleDateFormat
@@ -38,10 +40,10 @@ fun OrderDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Chi tiết đơn hàng") },
+                title = { Text(stringResource(R.string.order_detail_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, "Back")
+                        Icon(Icons.Default.ArrowBack, stringResource(R.string.back))
                     }
                 }
             )
@@ -58,7 +60,7 @@ fun OrderDetailScreen(
                 }
                 uiState.error != null -> {
                     Text(
-                        text = uiState.error ?: "Unknown error",
+                        text = uiState.error ?: "",
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier
                             .align(Alignment.Center)
@@ -76,16 +78,16 @@ fun OrderDetailScreen(
                             OrderHeader(
                                 orderId = uiState.order!!.id ?: "",
                                 status = uiState.order!!.status,
-                                paymentStatus = uiState.order!!.paymentStatus,
                                 createdAt = uiState.order!!.createdAt,
-                                totalAmount = uiState.order!!.totalAmount
+                                totalAmount = uiState.order!!.totalAmount,
+                                restaurant = uiState.restaurant
                             )
                         }
 
                         // Items header
                         item {
                             Text(
-                                "Món đã đặt",
+                                stringResource(R.string.items_ordered),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
@@ -104,7 +106,7 @@ fun OrderDetailScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
-                                    "Tổng cộng:",
+                                    stringResource(R.string.grand_total),
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -127,9 +129,9 @@ fun OrderDetailScreen(
 fun OrderHeader(
     orderId: String,
     status: String,
-    paymentStatus: String,
     createdAt: String?,
-    totalAmount: Double
+    totalAmount: Double,
+    restaurant: com.example.oneorder.data.model.Restaurant?
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -142,7 +144,7 @@ fun OrderHeader(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                "Mã đơn: ${orderId.takeLast(8)}",
+                stringResource(R.string.order_code, orderId.takeLast(8)),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -152,7 +154,7 @@ fun OrderHeader(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
-                    Text("Trạng thái:", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.order_status_label), style = MaterialTheme.typography.bodySmall)
                     Text(
                         getStatusText(status),
                         style = MaterialTheme.typography.bodyMedium,
@@ -161,20 +163,22 @@ fun OrderHeader(
                     )
                 }
 
-                Column {
-                    Text("Thanh toán:", style = MaterialTheme.typography.bodySmall)
-                    Text(
-                        getPaymentStatusText(paymentStatus),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = getDetailPaymentStatusColor(paymentStatus)
-                    )
+                if (restaurant != null) {
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text("Nhà hàng", style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            restaurant.name,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                 }
             }
 
             createdAt?.let {
                 Text(
-                    "Thời gian: ${formatDate(it)}",
+                    stringResource(R.string.order_time_label, formatDate(it)),
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -184,6 +188,9 @@ fun OrderHeader(
 
 @Composable
 fun OrderItemCard(item: OrderItemWithDetails) {
+    val quantityStr = stringResource(R.string.quantity_label, item.orderItem.quantity)
+    val noteStr = item.orderItem.note?.let { stringResource(R.string.note_label, it) }
+
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -215,14 +222,14 @@ fun OrderItemCard(item: OrderItemWithDetails) {
                 )
 
                 Text(
-                    "Số lượng: ${item.orderItem.quantity}",
+                    quantityStr,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                item.orderItem.note?.let { note ->
+                if (noteStr != null) {
                     Text(
-                        "Ghi chú: $note",
+                        noteStr,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier.padding(top = 4.dp)
@@ -251,23 +258,17 @@ fun getDetailStatusColor(status: String) = when (status.lowercase()) {
 }
 
 @Composable
-fun getDetailPaymentStatusColor(paymentStatus: String) = when (paymentStatus.lowercase()) {
-    "paid" -> MaterialTheme.colorScheme.primary
-    else -> MaterialTheme.colorScheme.error
-}
-
-fun getStatusText(status: String) = when (status.lowercase()) {
-    "pending" -> "Chờ xác nhận"
-    "preparing" -> "Đang chuẩn bị"
-    "served" -> "Đã phục vụ"
-    "paid" -> "Đã thanh toán"
-    else -> status
-}
-
-fun getPaymentStatusText(paymentStatus: String) = when (paymentStatus.lowercase()) {
-    "paid" -> "Đã thanh toán"
-    "unpaid" -> "Chưa thanh toán"
-    else -> paymentStatus
+fun getStatusText(status: String): String {
+    val resId = when (status.lowercase()) {
+        "pending"   -> R.string.status_pending
+        "preparing" -> R.string.status_preparing
+        "served"    -> R.string.status_served
+        "paid"      -> R.string.status_paid
+        "cancelled" -> R.string.status_cancelled
+        "completed" -> R.string.status_completed
+        else        -> null
+    }
+    return if (resId != null) stringResource(resId) else status
 }
 
 fun formatDate(dateString: String): String {

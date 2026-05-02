@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OneOrder - Đang xử lý...</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .container {
+            background: white;
+            padding: 48px;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 420px;
+            width: 90%;
+        }
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 24px;
+        }
+        h1 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 16px;
+        }
+        p {
+            color: #666;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 24px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .fallback {
+            display: none;
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid #eee;
+        }
+        .fallback a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .fallback a:hover {
+            text-decoration: underline;
+        }
+        .hidden {
+            display: none;
+        }
+        .error {
+            color: #e74c3c;
+        }
+        .success-icon {
+            width: 64px;
+            height: 64px;
+            background: #4CAF50;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+        }
+        .success-icon svg {
+            width: 32px;
+            height: 32px;
+            fill: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="container">
+        <!-- Loading State -->
+        <div id="loading">
+            <div class="spinner"></div>
+            <h1>Đang chuyển hướng...</h1>
+            <p>Vui lòng chờ trong giây lát.<br>Ứng dụng OneOrder đang được mở.</p>
+        </div>
+
+        <!-- Success State -->
+        <div id="success" class="hidden">
+            <div class="success-icon">
+                <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            </div>
+            <h1>Thành công!</h1>
+            <p>Đang mở ứng dụng OneOrder để đặt lại mật khẩu của bạn.</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="error" class="hidden">
+            <h1 class="error">Đã xảy ra lỗi</h1>
+            <p id="error-message">Không thể mở ứng dụng. Vui lòng thử lại.</p>
+        </div>
+
+        <!-- Fallback for when app can't be opened -->
+        <div class="fallback" id="fallback">
+            <p>Không thể tự động mở ứng dụng?</p>
+            <p><a href="#" id="manual-open">Nhấn vào đây để tiếp tục</a></p>
+        </div>
+    </div>
+
+    <script>
+        // Parse URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const type = urlParams.get('type'); // 'recovery' for password reset, 'confirm' for email confirmation
+        const token = urlParams.get('token');
+        const email = urlParams.get('email');
+        const redirectTo = urlParams.get('redirect_to');
+
+        // App scheme for Android
+        const APP_SCHEME = 'oneorder';
+        const APP_HOST_PASSWORD_RESET = 'password-reset';
+        const APP_HOST_MFA = 'mfa-verify';
+        const APP_HOST_CONFIRM = 'confirm-email';
+
+        function buildDeepLink() {
+            let host, path;
+
+            switch(type) {
+                case 'recovery':
+                    host = APP_HOST_PASSWORD_RESET;
+                    path = `token=${encodeURIComponent(token || '')}&email=${encodeURIComponent(email || '')}`;
+                    break;
+                case 'mfa':
+                    host = APP_HOST_MFA;
+                    path = `token=${encodeURIComponent(token || '')}`;
+                    break;
+                case 'confirm':
+                default:
+                    host = APP_HOST_CONFIRM;
+                    path = `token=${encodeURIComponent(token || '')}&email=${encodeURIComponent(email || '')}`;
+                    break;
+            }
+
+            return `${APP_SCHEME}://${host}?${path}`;
+        }
+
+        function tryOpenApp() {
+            const deepLink = buildDeepLink();
+
+            // Try to open the app using location (works on mobile)
+            const start = Date.now();
+            window.location.href = deepLink;
+
+            // If app is installed, browser will switch to app
+            // If not, we need fallback
+
+            // Check after timeout if we're still on this page
+            setTimeout(() => {
+                const elapsed = Date.now() - start;
+                // If more than 2 seconds passed and we're still here, app didn't open
+                if (elapsed > 2000 && document.visibilityState === 'visible') {
+                    showFallback(deepLink);
+                }
+            }, 2000);
+        }
+
+        function showFallback(deepLink) {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('error').classList.remove('hidden');
+            document.getElementById('fallback').style.display = 'block';
+
+            document.getElementById('manual-open').href = deepLink;
+            document.getElementById('error-message').textContent =
+                'Vui lòng cài đặt ứng dụng OneOrder hoặc nhấn vào liên kết bên dưới.';
+        }
+
+        function showSuccess() {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('success').classList.remove('hidden');
+        }
+
+        // Handle visibility change (app was opened)
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                // App was opened, user left this page
+                showSuccess();
+            }
+        });
+
+        // Check if this is a valid redirect
+        if (type && (token || email)) {
+            tryOpenApp();
+        } else {
+            // Invalid or missing parameters
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('error').classList.remove('hidden');
+            document.getElementById('error-message').textContent =
+                'Liên kết không hợp lệ. Vui lòng yêu cầu gửi lại email.';
+        }
+    </script>
+</body>
+</html>

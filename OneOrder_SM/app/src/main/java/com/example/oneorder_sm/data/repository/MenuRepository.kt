@@ -31,7 +31,17 @@ class MenuRepositoryImpl @Inject constructor(
 
     override suspend fun getCategories(): Result<List<Category>> {
         return try {
-            val categories = supabase.postgrest.from("categories").select().decodeList<Category>()
+            val currentUser = supabase.auth.currentUserOrNull()
+                ?: return Result.failure(Exception("User not authenticated"))
+            val profile = supabase.postgrest.from("profiles")
+                .select { filter { eq("id", currentUser.id) } }
+                .decodeSingleOrNull<ProfileWithTenant>()
+            val tenantId = profile?.tenantId
+                ?: return Result.failure(Exception("Nhà hàng chưa được thiết lập."))
+
+            val categories = supabase.postgrest.from("categories").select {
+                filter { eq("tenant_id", tenantId) }
+            }.decodeList<Category>()
             Result.success(categories)
         } catch (e: Exception) {
             Result.failure(e)
@@ -40,9 +50,18 @@ class MenuRepositoryImpl @Inject constructor(
 
     override suspend fun getMenuItems(categoryId: Long?): Result<List<MenuItem>> {
         return try {
+            val currentUser = supabase.auth.currentUserOrNull()
+                ?: return Result.failure(Exception("User not authenticated"))
+            val profile = supabase.postgrest.from("profiles")
+                .select { filter { eq("id", currentUser.id) } }
+                .decodeSingleOrNull<ProfileWithTenant>()
+            val tenantId = profile?.tenantId
+                ?: return Result.failure(Exception("Nhà hàng chưa được thiết lập."))
+
             val items = supabase.postgrest.from("menu_items").select {
-                if (categoryId != null) {
-                    filter {
+                filter {
+                    eq("tenant_id", tenantId)
+                    if (categoryId != null) {
                         eq("category_id", categoryId)
                     }
                 }

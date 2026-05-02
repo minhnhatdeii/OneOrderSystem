@@ -41,7 +41,14 @@ sealed interface Screen {
     
     @Serializable
     data object Profile : Screen
+    
+    // Password recovery routes
+    @Serializable
+    data object ForgotPassword : Screen
+
+    @Serializable
+    data class PasswordReset(val token: String? = null, val email: String? = null) : Screen
+
+    @Serializable
+    data object RestaurantFeed : Screen
 }
-
-
-

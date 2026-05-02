@@ -7,10 +7,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import com.example.oneorder_sm.MainActivity
 import com.example.oneorder_sm.ui.screens.auth.WelcomeScreen
 import com.example.oneorder_sm.ui.screens.auth.RestaurantLoginScreen
 import com.example.oneorder_sm.ui.screens.auth.StaffLoginScreen
 import com.example.oneorder_sm.ui.screens.auth.RegisterRestaurantScreen
+import com.example.oneorder_sm.ui.screens.auth.ForgotPasswordScreen
+import com.example.oneorder_sm.ui.screens.auth.PasswordResetScreen
 import com.example.oneorder_sm.ui.screens.main.MainScreen
 import com.example.oneorder_sm.ui.screens.orders.OrderDetailScreen
 
@@ -21,17 +24,33 @@ fun AppNavigation(
 ) {
     val navController = rememberNavController()
     
-    // Handle email confirmation deep link
+    // Handle deep links
     LaunchedEffect(pendingDeepLink) {
         pendingDeepLink?.let { uri ->
             android.util.Log.d("AppNavigation", "Processing deep link: $uri")
             
-            if (uri.scheme == "oneorder" && uri.host == "confirm") {
-                // Email confirmation link
-                // Navigate to login screen and show confirmation message
-                android.util.Log.d("AppNavigation", "Email confirmed! Navigating to login...")
-                navController.navigate(Screen.RestaurantLogin)
-                onDeepLinkHandled()
+            when {
+                uri.scheme == "oneorder" && uri.host == "confirm" -> {
+                    // Email confirmation link
+                    android.util.Log.d("AppNavigation", "Email confirmed! Navigating to login...")
+                    navController.navigate(Screen.RestaurantLogin)
+                    onDeepLinkHandled()
+                }
+                uri.scheme == "oneorder" && uri.host == "password-reset" -> {
+                    // Password reset link — navigate to reset screen
+                    android.util.Log.d("AppNavigation", "Password reset! Navigating to reset screen...")
+                    val token = uri.getQueryParameter("token")
+                    val email = uri.getQueryParameter("email")
+                    navController.navigate(Screen.PasswordReset(
+                        token = token,
+                        email = email
+                    )) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                    onDeepLinkHandled()
+                    // Also clear the static variable since we've passed via route
+                    MainActivity.pendingPasswordResetLink = null
+                }
             }
         }
     }
@@ -65,6 +84,9 @@ fun AppNavigation(
                     navController.navigate(Screen.Main) {
                         popUpTo(Screen.Welcome) { inclusive = true }
                     }
+                },
+                onNavigateToForgotPassword = {
+                    navController.navigate(Screen.ForgotPassword)
                 }
             )
         }
@@ -79,6 +101,9 @@ fun AppNavigation(
                     navController.navigate(Screen.Main) {
                         popUpTo(Screen.Welcome) { inclusive = true }
                     }
+                },
+                onNavigateToForgotPassword = {
+                    navController.navigate(Screen.ForgotPassword)
                 }
             )
         }
@@ -94,6 +119,37 @@ fun AppNavigation(
                     // User needs to confirm email and then log in
                     navController.navigate(Screen.RestaurantLogin) {
                         popUpTo(Screen.Welcome) { inclusive = false }
+                    }
+                }
+            )
+        }
+        
+        // Forgot Password Screen
+        composable<Screen.ForgotPassword> {
+            ForgotPasswordScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToLogin = {
+                    navController.navigate(Screen.RestaurantLogin) {
+                        popUpTo(Screen.Welcome) { inclusive = false }
+                    }
+                }
+            )
+        }
+        
+        // Password Reset Screen (from email deep link)
+        composable<Screen.PasswordReset> { backStackEntry ->
+            val route: Screen.PasswordReset = backStackEntry.toRoute()
+            PasswordResetScreen(
+                token = route.token,
+                email = route.email,
+                onNavigateBack = {
+                    navController.navigate(Screen.RestaurantLogin) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                onPasswordResetComplete = {
+                    navController.navigate(Screen.RestaurantLogin) {
+                        popUpTo(0) { inclusive = true }
                     }
                 }
             )

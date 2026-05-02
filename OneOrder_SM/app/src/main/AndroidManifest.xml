@@ -10,9 +10,9 @@
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:icon="@drawable/logo_oneorder"
+        android:icon="@drawable/logo_app"
         android:label="@string/app_name"
-        android:roundIcon="@drawable/logo_oneorder"
+        android:roundIcon="@drawable/logo_app"
         android:supportsRtl="true"
         android:theme="@style/Theme.OneOrder_SM">
         <activity
@@ -34,6 +34,16 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 
                 <data android:scheme="oneorder" android:host="confirm" />
+            </intent-filter>
+            
+            <!-- Deep link for password reset -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                
+                <data android:scheme="oneorder" android:host="password-reset" />
             </intent-filter>
         </activity>
     </application>

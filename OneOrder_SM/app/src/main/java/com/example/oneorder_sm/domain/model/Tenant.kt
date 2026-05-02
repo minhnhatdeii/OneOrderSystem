@@ -22,6 +22,9 @@ data class Tenant(
     val email: String? = null,
     @SerialName("logo_url")
     val logoUrl: String? = null,
+    @SerialName("cover_url")
+    val coverUrl: String? = null,
+    val description: String? = null,
     val timezone: String = "Asia/Ho_Chi_Minh",
     val currency: String = "VND",
     @SerialName("is_active")

@@ -5,13 +5,15 @@ import com.example.oneorder_sm.domain.repository.TenantRepository
 import io.github.jan.supabase.gotrue.Auth
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.rpc
+import io.github.jan.supabase.storage.Storage
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import javax.inject.Inject
 
 class TenantRepositoryImpl @Inject constructor(
     private val auth: Auth,
-    private val postgrest: Postgrest
+    private val postgrest: Postgrest,
+    private val storage: Storage
 ) : TenantRepository {
 
     override suspend fun createRestaurant(
@@ -106,7 +108,10 @@ class TenantRepositoryImpl @Inject constructor(
         name: String?,
         address: String?,
         phone: String?,
-        email: String?
+        email: String?,
+        logoUrl: String?,
+        coverUrl: String?,
+        description: String?
     ): Result<Unit> {
         return try {
             // Call the update_tenant_info function
@@ -115,6 +120,9 @@ class TenantRepositoryImpl @Inject constructor(
                 address?.let { put("p_address", it) }
                 phone?.let { put("p_phone", it) }
                 email?.let { put("p_email", it) }
+                logoUrl?.let { put("p_logo_url", it) }
+                coverUrl?.let { put("p_cover_url", it) }
+                description?.let { put("p_description", it) }
             }
             
             postgrest.rpc("update_tenant_info", params)
@@ -142,6 +150,56 @@ class TenantRepositoryImpl @Inject constructor(
                     "menu_item_count" to 0
                 )
             )
+        }
+    }
+
+    override suspend fun uploadTenantLogo(
+        imageBytes: ByteArray,
+        extension: String
+    ): Result<String> {
+        return try {
+            val tenant = getCurrentTenant().getOrNull()
+                ?: return Result.failure(Exception("No tenant found"))
+            
+            val fileName = "tenant_${tenant.id}_${java.util.UUID.randomUUID()}.$extension"
+            
+            val bucket = storage["avatars"]
+            bucket.upload(fileName, imageBytes, upsert = true)
+            
+            val publicUrl = bucket.publicUrl(fileName)
+            
+            // Update tenant info with new logo
+            updateTenant(logoUrl = publicUrl)
+            
+            Result.success(publicUrl)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun uploadTenantCover(
+        imageBytes: ByteArray,
+        extension: String
+    ): Result<String> {
+        return try {
+            val tenant = getCurrentTenant().getOrNull()
+                ?: return Result.failure(Exception("No tenant found"))
+            
+            val fileName = "tenant_cover_${tenant.id}_${java.util.UUID.randomUUID()}.$extension"
+            
+            val bucket = storage["avatars"] // Using avatars bucket as we don't have a dedicated covers bucket
+            bucket.upload(fileName, imageBytes, upsert = true)
+            
+            val publicUrl = bucket.publicUrl(fileName)
+            
+            // Update tenant info with new cover
+            updateTenant(coverUrl = publicUrl)
+            
+            Result.success(publicUrl)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
         }
     }
 }

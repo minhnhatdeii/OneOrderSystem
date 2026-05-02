@@ -89,8 +89,12 @@ fun OrderDetailScreen(
         uiState.order?.let { order ->
             OrderDetailContent(
                 order = order,
+                isSavingNote = uiState.isSavingNote,
                 onStatusUpdate = { newStatus ->
                     viewModel.updateStatus(orderId, newStatus)
+                },
+                onSaveNote = { note ->
+                    viewModel.saveNote(orderId, note)
                 }
             )
         }
@@ -100,7 +104,9 @@ fun OrderDetailScreen(
 @Composable
 private fun OrderDetailContent(
     order: Order,
-    onStatusUpdate: (OrderStatus) -> Unit
+    isSavingNote: Boolean,
+    onStatusUpdate: (OrderStatus) -> Unit,
+    onSaveNote: (String) -> Unit
 ) {
     // Order Header Card
     Card(
@@ -225,6 +231,13 @@ private fun OrderDetailContent(
             }
         }
     }
+
+    // Staff Note Card
+    StaffNoteCard(
+        initialNote = order.staffNote ?: "",
+        isSaving = isSavingNote,
+        onSave = onSaveNote
+    )
     
     // Status Action Button
     StatusActionButton(
@@ -315,48 +328,190 @@ private fun StatusActionButton(
         else -> null
     }
     
-    if (statusAction != null) {
-        val (nextStatus, buttonText, buttonIcon) = statusAction
-        Button(
-            onClick = { onStatusUpdate(nextStatus) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary
-            )
-        ) {
-            Icon(buttonIcon, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(buttonText, style = MaterialTheme.typography.titleMedium)
-        }
-    } else if (currentStatus == OrderStatus.PAID) {
-        // Show completion badge
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
-            )
-        ) {
-            Row(
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        if (statusAction != null) {
+            val (nextStatus, buttonText, buttonIcon) = statusAction
+            Button(
+                onClick = { onStatusUpdate(nextStatus) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Icon(buttonIcon, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(buttonText, style = MaterialTheme.typography.titleMedium)
+            }
+        } else if (currentStatus == OrderStatus.PAID) {
+            // Show completion badge
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Đơn hàng đã hoàn tất",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+
+        // Hiện nút hủy đơn đối với các đơn chưa làm xong
+        if (currentStatus in listOf(OrderStatus.PENDING, OrderStatus.CONFIRMED, OrderStatus.PREPARING)) {
+            OutlinedButton(
+                onClick = { onStatusUpdate(OrderStatus.CANCELLED) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error
+                )
+            ) {
+                Icon(Icons.Default.Cancel, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Hủy đơn", style = MaterialTheme.typography.titleMedium)
+            }
+        } else if (currentStatus == OrderStatus.CANCELLED) {
+            // Badge trạng thái đã hủy
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Cancel,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Đơn hàng đã bị hủy",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StaffNoteCard(
+    initialNote: String,
+    isSaving: Boolean,
+    onSave: (String) -> Unit
+) {
+    var noteText by remember(initialNote) { mutableStateOf(initialNote) }
+    val hasChanges = noteText != initialNote
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Icon(
-                    Icons.Default.CheckCircle,
+                    imageVector = Icons.Default.Edit,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.size(18.dp)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    "Đơn hàng đã hoàn tất",
-                    style = MaterialTheme.typography.titleMedium,
+                    text = "Ghi chú nội bộ",
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = noteText,
+                onValueChange = { noteText = it },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = {
+                    Text(
+                        "Nhập ghi chú cho đơn hàng này...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                },
+                minLines = 3,
+                maxLines = 6,
+                shape = RoundedCornerShape(10.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                )
+            )
+
+            if (hasChanges) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Button(
+                    onClick = { onSave(noteText) },
+                    enabled = !isSaving,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondary
+                    )
+                ) {
+                    if (isSaving) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onSecondary
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Đang lưu...")
+                    } else {
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Lưu ghi chú", fontWeight = FontWeight.Bold)
+                    }
+                }
             }
         }
     }

@@ -6,5 +6,6 @@ data class OrderDetailUiState(
     val order: Order? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
-    val successMessage: String? = null
+    val successMessage: String? = null,
+    val isSavingNote: Boolean = false
 )

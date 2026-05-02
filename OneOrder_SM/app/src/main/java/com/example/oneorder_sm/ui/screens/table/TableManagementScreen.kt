@@ -3,14 +3,20 @@ package com.example.oneorder_sm.ui.screens.table
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.oneorder_sm.data.model.Table
@@ -19,6 +25,7 @@ import com.example.oneorder_sm.data.model.Table
 @Composable
 fun TableManagementScreen(
     onNavigateBack: () -> Unit = {},
+    onNavigateToOrder: (String) -> Unit = {},
     viewModel: TableManagementViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -58,21 +65,22 @@ fun TableManagementScreen(
                 modifier = Modifier.align(Alignment.Center)
             )
         } else {
-            LazyColumn(
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 160.dp),
                 contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxSize()
             ) {
                 items(uiState.tables) { table ->
                     TableCard(
                         table = table,
-                        onToggleStatus = {
-                            val newStatus = if (table.status == "free") "occupied" else "free"
-                            viewModel.updateStatus(table.id!!, newStatus)
-                        },
-                        onLongClick = {
+                        onClick = {
                             selectedTable = table
+                            if (table.status == "occupied") {
+                                viewModel.loadOrderForTable(table.id!!)
+                            }
                             showDetailDialog = true
-                            viewModel.generateQRCode(table.id!!)
                         }
                     )
                 }
@@ -113,15 +121,18 @@ fun TableManagementScreen(
             )
         }
 
-        // Detail Dialog with QR Code
+        // Detail Bottom Sheet
         if (showDetailDialog && selectedTable != null) {
-            TableDetailDialog(
+            TableDetailBottomSheet(
                 table = selectedTable!!,
+                activeOrder = uiState.selectedTableOrder,
+                isLoadingOrder = uiState.isLoadingOrder,
                 qrCode = uiState.generatedQRCode,
                 onDismiss = {
                     showDetailDialog = false
                     selectedTable = null
                     viewModel.clearQRCode()
+                    viewModel.clearSelectedOrder()
                 },
                 onEdit = {
                     showDetailDialog = false
@@ -132,104 +143,142 @@ fun TableManagementScreen(
                     showDetailDialog = false
                     selectedTable = null
                     viewModel.clearQRCode()
+                    viewModel.clearSelectedOrder()
                 },
                 onGenerateQR = {
                     viewModel.generateQRCode(selectedTable!!.id!!)
+                },
+                onNavigateToOrder = { orderId ->
+                    showDetailDialog = false
+                    selectedTable = null
+                    viewModel.clearSelectedOrder()
+                    onNavigateToOrder(orderId)
+                },
+                onCheckout = { orderId ->
+                    viewModel.checkoutTable(selectedTable!!.id!!, orderId)
+                    showDetailDialog = false
+                    selectedTable = null
+                    viewModel.clearSelectedOrder()
+                },
+                onToggleStatus = {
+                    val newStatus = if (selectedTable!!.status == "free") "occupied" else "free"
+                    viewModel.updateStatus(selectedTable!!.id!!, newStatus)
+                    // The bottom sheet receives the updated table from the uiState if we re-read selectedTable 
+                    // To ensure immediate UI feedback, we can update the selectedTable manually or wait for the recomposition logic.
+                    // Instead of full recomposition here, closing sheet is safer, or we just rely on Flow update.
+                    showDetailDialog = false
+                    selectedTable = null
+                    viewModel.clearSelectedOrder()
                 }
             )
         }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TableCard(table: Table, onToggleStatus: () -> Unit, onLongClick: () -> Unit) {
+fun TableCard(table: Table, onClick: () -> Unit) {
     val isOccupied = table.status == "occupied"
     val statusColor = if (isOccupied) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-    val cardColor = if (isOccupied) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer
+    val cardColor = if (isOccupied) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                onClick = onToggleStatus,
-                onLongClick = onLongClick
-            ),
-        colors = CardDefaults.cardColors(containerColor = cardColor)
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick,
+        colors = CardDefaults.cardColors(containerColor = cardColor),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 0.dp,
+            pressedElevation = 4.dp
+        )
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalAlignment = Alignment.Start
         ) {
-            // Left side: Table info
-            Column(
-                modifier = Modifier.weight(1f)
+            // Top: Table Name and Status Dot
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
             ) {
-                // Table name
                 Text(
                     text = table.name,
                     style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                // Capacity and location row
+
+                // Status indicator
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = statusColor,
+                    modifier = Modifier.size(12.dp).padding(top = 4.dp)
+                ) {}
+            }
+
+            // Bottom: Info (Capacity & Location)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                // Capacity
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    // Capacity
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Sức chứa",
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "${table.capacity} khách",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                // Location
+                if (!table.location.isNullOrBlank()) {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Text(
-                            text = "👥",
-                            style = MaterialTheme.typography.bodyMedium
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = "Vị trí",
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "${table.capacity} chỗ",
+                            text = table.location,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
-                    }
-                    
-                    // Location (if available)
-                    if (!table.location.isNullOrBlank()) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "📍",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            Text(
-                                text = table.location,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
                     }
                 }
-            }
-            
-            // Right side: Status badge
-            Surface(
-                shape = MaterialTheme.shapes.small,
-                color = statusColor,
-                modifier = Modifier.padding(start = 8.dp)
-            ) {
-                Text(
-                    text = if (isOccupied) "BẬN" else "TRỐNG",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                )
+                
+                // Status Text Badge
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (isOccupied) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 8.dp)
+                ) {
+                    Text(
+                        text = if (isOccupied) "Có khách" else "Trống",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }

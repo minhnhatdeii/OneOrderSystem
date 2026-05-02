@@ -3,6 +3,7 @@ package com.example.oneorder_sm.ui.screens.table
 import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.oneorder_sm.data.model.Order
 import com.example.oneorder_sm.data.model.Table
 import com.example.oneorder_sm.domain.usecase.*
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,7 +18,9 @@ data class TableListState(
     val tables: List<Table> = emptyList(),
     val error: String? = null,
     val successMessage: String? = null,
-    val generatedQRCode: Bitmap? = null
+    val generatedQRCode: Bitmap? = null,
+    val selectedTableOrder: Order? = null,
+    val isLoadingOrder: Boolean = false
 )
 
 @HiltViewModel
@@ -27,7 +30,9 @@ class TableManagementViewModel @Inject constructor(
     private val updateTableUseCase: UpdateTableUseCase,
     private val deleteTableUseCase: DeleteTableUseCase,
     private val updateTableStatusUseCase: UpdateTableStatusUseCase,
-    private val generateQRCodeUseCase: GenerateQRCodeUseCase
+    private val generateQRCodeUseCase: GenerateQRCodeUseCase,
+    private val getActiveOrdersUseCase: GetActiveOrdersUseCase,
+    private val updateOrderStatusUseCase: UpdateOrderStatusUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TableListState())
@@ -141,5 +146,49 @@ class TableManagementViewModel @Inject constructor(
 
     fun clearMessages() {
         _uiState.value = _uiState.value.copy(error = null, successMessage = null)
+    }
+
+    fun loadOrderForTable(tableId: Long) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoadingOrder = true, selectedTableOrder = null)
+            val result = getActiveOrdersUseCase()
+            if (result.isSuccess) {
+                val activeOrders = result.getOrDefault(emptyList())
+                val tableOrder = activeOrders
+                    .filter { it.status != com.example.oneorder_sm.data.model.OrderStatus.CANCELLED && it.status != com.example.oneorder_sm.data.model.OrderStatus.PAID }
+                    .find { it.tableId?.toLong() == tableId }
+                _uiState.value = _uiState.value.copy(
+                    selectedTableOrder = tableOrder,
+                    isLoadingOrder = false
+                )
+            } else {
+                _uiState.value = _uiState.value.copy(
+                    isLoadingOrder = false,
+                    error = "Failed to load order: " + result.exceptionOrNull()?.message
+                )
+            }
+        }
+    }
+
+    fun clearSelectedOrder() {
+        _uiState.value = _uiState.value.copy(selectedTableOrder = null)
+    }
+
+    fun checkoutTable(tableId: Long, orderId: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            val result = updateOrderStatusUseCase(orderId, com.example.oneorder_sm.data.model.OrderStatus.PAID)
+            if (result.isSuccess) {
+                // Now mark table as free
+                updateStatus(tableId, "free")
+                _uiState.value = _uiState.value.copy(successMessage = "Thanh toán thành công!")
+                clearSelectedOrder()
+            } else {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = "Lỗi thanh toán: " + result.exceptionOrNull()?.message
+                )
+            }
+        }
     }
 }

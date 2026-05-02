@@ -12,11 +12,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.example.oneorder.R
 import com.example.oneorder.data.model.CartItem
 
 @Composable
@@ -27,28 +32,65 @@ fun CartScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Header with title and back button
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .drawBehind {
+                val squareSize = 16.dp.toPx()
+                val strokeWidth = 1.dp.toPx()
+                drawRect(color = Color.White)
+                val gridColor = Color.Black.copy(alpha = 0.1f)
+                var x = 0f
+                while (x < size.width) {
+                    drawLine(
+                        color = gridColor,
+                        start = Offset(x, 0f),
+                        end = Offset(x, size.height),
+                        strokeWidth = strokeWidth
+                    )
+                    x += squareSize
+                }
+                var y = 0f
+                while (y < size.height) {
+                    drawLine(
+                        color = gridColor,
+                        start = Offset(0f, y),
+                        end = Offset(size.width, y),
+                        strokeWidth = strokeWidth
+                    )
+                    y += squareSize
+                }
+            }
+    ) {
+        // Header
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shadowElevation = 4.dp,
-            color = MaterialTheme.colorScheme.surface
+            shadowElevation = 0.dp,
+            color = Color.Transparent
         ) {
-            Row(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(horizontal = 4.dp, vertical = 4.dp),
+                contentAlignment = Alignment.Center
             ) {
-                IconButton(onClick = onNavigateBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                }
+                // Center: title
                 Text(
-                    text = "My Cart",
-                    style = MaterialTheme.typography.headlineSmall,
+                    text = stringResource(R.string.cart_title),
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(start = 8.dp)
+                    color = MaterialTheme.colorScheme.onSurface
                 )
+                // Left: back arrow
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back),
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
             }
         }
 
@@ -61,12 +103,12 @@ fun CartScreen(
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = "Your cart is empty",
+                        text = stringResource(R.string.cart_empty),
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "Add items from the menu to get started",
+                        text = stringResource(R.string.cart_empty_hint),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                         modifier = Modifier.padding(top = 8.dp)
@@ -105,7 +147,11 @@ fun CartScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Total:", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        Text(
+                            stringResource(R.string.total),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
                         Text(
                             com.example.oneorder.utils.CurrencyFormatter.formatVND(uiState.total),
                             style = MaterialTheme.typography.titleLarge,
@@ -118,7 +164,7 @@ fun CartScreen(
                         onClick = onCheckout,
                         modifier = Modifier.fillMaxWidth().height(50.dp)
                     ) {
-                        Text("Proceed to Checkout")
+                        Text(stringResource(R.string.proceed_checkout))
                     }
                 }
             }
@@ -133,6 +179,11 @@ fun CartItemCard(
     onDecrease: () -> Unit,
     onRemove: () -> Unit
 ) {
+    val subtotalStr = stringResource(
+        R.string.subtotal,
+        com.example.oneorder.utils.CurrencyFormatter.formatVND(cartItem.totalPrice)
+    )
+
     Card(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.padding(8.dp),
@@ -149,22 +200,29 @@ fun CartItemCard(
                 modifier = Modifier.weight(1f).padding(horizontal = 12.dp)
             ) {
                 Text(cartItem.menuItem.name, style = MaterialTheme.typography.titleMedium)
-                Text(com.example.oneorder.utils.CurrencyFormatter.formatVND(cartItem.menuItem.price), style = MaterialTheme.typography.bodyMedium)
                 Text(
-                    "Tổng: ${com.example.oneorder.utils.CurrencyFormatter.formatVND(cartItem.totalPrice)}",
+                    com.example.oneorder.utils.CurrencyFormatter.formatVND(cartItem.menuItem.price),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    subtotalStr,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.secondary
                 )
             }
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                 IconButton(onClick = onRemove) {
-                    Icon(Icons.Default.Delete, contentDescription = "Remove", tint = MaterialTheme.colorScheme.error)
+                IconButton(onClick = onRemove) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = stringResource(R.string.remove),
+                        tint = MaterialTheme.colorScheme.error
+                    )
                 }
                 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onDecrease, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Default.Remove, contentDescription = "Decrease")
+                        Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.decrease))
                     }
                     Text(
                         text = "${cartItem.quantity}",
@@ -172,7 +230,7 @@ fun CartItemCard(
                         style = MaterialTheme.typography.bodyLarge
                     )
                     IconButton(onClick = onIncrease, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Default.Add, contentDescription = "Increase")
+                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.increase))
                     }
                 }
                

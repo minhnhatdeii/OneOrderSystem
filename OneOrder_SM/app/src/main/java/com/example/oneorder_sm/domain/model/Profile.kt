@@ -10,6 +10,8 @@ data class Profile(
     val tenantId: String? = null,
     @SerialName("full_name")
     val fullName: String? = null,
+    @SerialName("avatar_url")
+    val avatarUrl: String? = null,
     val role: String, // "staff" or "manager"
     @SerialName("phone_number")
     val phoneNumber: String? = null,

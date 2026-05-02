@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Remove
@@ -16,8 +17,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -26,6 +31,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.example.oneorder.R
 import com.example.oneorder.data.model.Category
 import com.example.oneorder.data.model.MenuItem
 import kotlinx.coroutines.launch
@@ -36,16 +42,52 @@ fun HomeScreen(
     onNavigateToCart: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToQRScanner: () -> Unit,
+    onNavigateBack: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .drawBehind {
+                val squareSize = 16.dp.toPx()
+                val strokeWidth = 1.dp.toPx()
+                drawRect(color = Color.White)
+                val gridColor = Color.Black.copy(alpha = 0.1f)
+                var x = 0f
+                while (x < size.width) {
+                    drawLine(
+                        color = gridColor,
+                        start = Offset(x, 0f),
+                        end = Offset(x, size.height),
+                        strokeWidth = strokeWidth
+                    )
+                    x += squareSize
+                }
+                var y = 0f
+                while (y < size.height) {
+                    drawLine(
+                        color = gridColor,
+                        start = Offset(0f, y),
+                        end = Offset(size.width, y),
+                        strokeWidth = strokeWidth
+                    )
+                    y += squareSize
+                }
+            }
+    ) {
         // Custom Header
-        HomeHeader(onScanQR = onNavigateToQRScanner)
+        HomeHeader(
+            onNavigateBack = onNavigateBack,
+            onScanQR = onNavigateToQRScanner
+        )
         
         // Content
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+        ) {
             if (uiState.isLoading) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             } else if (uiState.restaurant == null) {
@@ -91,12 +133,21 @@ fun HomeScreen(
                 Column(modifier = Modifier.fillMaxSize()) {
                     // Categories horizontal scroll bar - STICKY at top
                     if (uiState.categories.isNotEmpty()) {
+                        val categoryListState = androidx.compose.foundation.lazy.rememberLazyListState()
+                        
+                        LaunchedEffect(activeCategoryIndex) {
+                            if (activeCategoryIndex >= 0) {
+                                categoryListState.animateScrollToItem(activeCategoryIndex)
+                            }
+                        }
+
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
-                            shadowElevation = 4.dp,
-                            color = MaterialTheme.colorScheme.surface
+                            shadowElevation = 0.dp,
+                            color = Color.Transparent // Let tablecloth show through or use semi-transparent white
                         ) {
                             LazyRow(
+                                state = categoryListState,
                                 modifier = Modifier.fillMaxWidth(),
                                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -166,40 +217,59 @@ fun HomeScreen(
 }
 
 @Composable
-fun HomeHeader(onScanQR: () -> Unit) {
+fun HomeHeader(
+    onNavigateBack: () -> Unit,
+    onScanQR: () -> Unit
+) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shadowElevation = 4.dp,
-        color = MaterialTheme.colorScheme.surface
+        shadowElevation = 0.dp,
+        color = Color.Transparent
     ) {
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 4.dp, vertical = 4.dp),
+            contentAlignment = Alignment.Center
         ) {
-            // OneOrder logo with styled text
+            // Center: OneOrder logo
             Text(
                 text = buildAnnotatedString {
-                    withStyle(style = SpanStyle(color = Color.Black, fontWeight = FontWeight.Bold)) {
-                        append("One")
-                    }
-                    withStyle(style = SpanStyle(color = Color(0xFF228BE2), fontWeight = FontWeight.Bold)) {
-                        append("Order")
-                    }
+                    withStyle(style = SpanStyle(
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.ExtraBold
+                    )) { append("One") }
+                    withStyle(style = SpanStyle(
+                        color = Color(0xFF228BE2),
+                        fontWeight = FontWeight.ExtraBold
+                    )) { append("Order") }
                 },
-                style = MaterialTheme.typography.headlineSmall
+                style = MaterialTheme.typography.titleLarge
             )
-            
-            // QR Scanner button
-            IconButton(onClick = onScanQR) {
-                Icon(
-                    imageVector = Icons.Default.QrCodeScanner,
-                    contentDescription = "Quét QR",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(28.dp)
-                )
+
+            // Left: Back arrow
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onNavigateBack) {
+                    Icon(
+                        imageVector = androidx.compose.material.icons.Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.back),
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                // Right: QR Scanner button
+                IconButton(onClick = onScanQR) {
+                    Icon(
+                        imageVector = androidx.compose.material.icons.Icons.Default.QrCodeScanner,
+                        contentDescription = stringResource(R.string.scan_qr),
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
             }
         }
     }
@@ -224,19 +294,21 @@ fun EmptyStatePrompt(onScanQR: () -> Unit) {
         Spacer(modifier = Modifier.height(24.dp))
         
         Text(
-            text = "Chào mừng đến với OneOrder!",
+            text = stringResource(R.string.welcome_oneorder),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center
         )
         
         Spacer(modifier = Modifier.height(12.dp))
         
         Text(
-            text = "Vui lòng quét mã QR của nhà hàng để xem thực đơn và đặt món",
+            text = stringResource(R.string.scan_qr_prompt),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp)
+            modifier = Modifier.padding(horizontal = 16.dp),
+            textAlign = TextAlign.Center
         )
         
         Spacer(modifier = Modifier.height(32.dp))
@@ -253,7 +325,7 @@ fun EmptyStatePrompt(onScanQR: () -> Unit) {
                 modifier = Modifier.size(24.dp)
             )
             Spacer(modifier = Modifier.width(12.dp))
-            Text("Quét mã QR", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.scan_qr), style = MaterialTheme.typography.titleMedium)
         }
     }
 }
@@ -299,7 +371,7 @@ fun RestaurantInfoSection(
                 shape = RoundedCornerShape(8.dp)
             ) {
                 Text(
-                    text = "Bàn: $tableName",
+                    text = stringResource(R.string.table_label, tableName),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimary,
@@ -318,7 +390,7 @@ fun CategoriesSection(
 ) {
     Column {
         Text(
-            text = "Danh mục",
+            text = stringResource(R.string.categories),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 12.dp)
@@ -347,7 +419,7 @@ fun CategoryChip(
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(20.dp),
-        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
         modifier = Modifier.height(40.dp)
     ) {
         Row(
@@ -358,7 +430,7 @@ fun CategoryChip(
                 text = category.name,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
             )
         }
     }
@@ -447,7 +519,7 @@ fun MenuItemCard(
                 onClick = { showNoteDialog = true },
                 modifier = Modifier.height(40.dp)
             ) {
-                Text("Thêm")
+                Text(stringResource(R.string.add))
             }
         }
     }
@@ -456,7 +528,7 @@ fun MenuItemCard(
     if (showNoteDialog) {
         AlertDialog(
             onDismissRequest = { showNoteDialog = false },
-            title = { Text("Thêm vào giỏ hàng") },
+            title = { Text(stringResource(R.string.add_to_cart)) },
             text = {
                 Column {
                     Text(
@@ -473,7 +545,7 @@ fun MenuItemCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "Số lượng:",
+                            stringResource(R.string.quantity),
                             style = MaterialTheme.typography.bodyLarge
                         )
                         
@@ -488,7 +560,7 @@ fun MenuItemCard(
                             ) {
                                 Icon(
                                     imageVector = androidx.compose.material.icons.Icons.Default.Remove,
-                                    contentDescription = "Giảm"
+                                    contentDescription = stringResource(R.string.decrease)
                                 )
                             }
                             
@@ -507,7 +579,7 @@ fun MenuItemCard(
                             ) {
                                 Icon(
                                     imageVector = androidx.compose.material.icons.Icons.Default.Add,
-                                    contentDescription = "Tăng"
+                                    contentDescription = stringResource(R.string.increase)
                                 )
                             }
                         }
@@ -521,8 +593,8 @@ fun MenuItemCard(
                     OutlinedTextField(
                         value = itemNote,
                         onValueChange = { itemNote = it },
-                        label = { Text("Ghi chú (tùy chọn)") },
-                        placeholder = { Text("VD: Không hành, ít đường...") },
+                        label = { Text(stringResource(R.string.note_optional)) },
+                        placeholder = { Text(stringResource(R.string.note_placeholder)) },
                         modifier = Modifier.fillMaxWidth(),
                         maxLines = 3
                     )
@@ -538,7 +610,7 @@ fun MenuItemCard(
                         quantity = 1
                     }
                 ) {
-                    Text("Thêm vào giỏ")
+                    Text(stringResource(R.string.add_to_cart_confirm))
                 }
             },
             dismissButton = {
@@ -547,7 +619,7 @@ fun MenuItemCard(
                     itemNote = ""
                     quantity = 1
                 }) {
-                    Text("Hủy")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )

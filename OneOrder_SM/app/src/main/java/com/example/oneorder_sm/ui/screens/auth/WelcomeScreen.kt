@@ -38,11 +38,10 @@ fun WelcomeScreen(
             // App Logo/Title
             // Logo Image
             Image(
-                painter = painterResource(id = R.drawable.logo_oneorder),
+                painter = painterResource(id = R.drawable.logo_oo2),
                 contentDescription = "OneOrder Logo",
                 modifier = Modifier
                     .size(120.dp)
-                    .clip(RoundedCornerShape(16.dp))
             )
             
             Spacer(modifier = Modifier.height(16.dp))
@@ -56,7 +55,7 @@ fun WelcomeScreen(
                     text = "One",
                     style = MaterialTheme.typography.displayMedium,
                     fontWeight = FontWeight.Bold,
-                    color = com.example.oneorder_sm.ui.theme.OneTextColor
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
                     text = "Order",

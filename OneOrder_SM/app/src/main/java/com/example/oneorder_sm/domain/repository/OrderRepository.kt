@@ -8,6 +8,7 @@ interface OrderRepository {
     suspend fun getActiveOrders(): Result<List<Order>>
     suspend fun getOrderById(orderId: String): Result<Order?>
     suspend fun updateOrderStatus(orderId: String, status: OrderStatus): Result<Unit>
+    suspend fun updateOrderNote(orderId: String, note: String?): Result<Unit>
     fun subscribeToOrders(): Flow<Order>
     
     // Paging

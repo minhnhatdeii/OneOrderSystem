@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">OneOrder</string>
+
+    <!-- ── Hồ sơ &amp; Cài đặt ── -->
+    <string name="profile_title">Hồ sơ cá nhân</string>
+    <string name="settings">Cài đặt</string>
+    <string name="full_name">Họ và tên</string>
+    <string name="phone_number">Số điện thoại</string>
+    <string name="role_customer">Khách hàng</string>
+    <string name="role_staff">Nhân viên</string>
+    <string name="role_admin">Quản lý</string>
+    <string name="edit_profile">Chỉnh sửa hồ sơ</string>
+    <string name="change_avatar">Đổi Ảnh</string>
+    <string name="change_password">Đổi mật khẩu</string>
+    <string name="personal_details">Thông tin cá nhân</string>
+    <string name="sign_out">Đăng xuất</string>
+    <string name="save">Lưu</string>
+    <string name="cancel">Hủy</string>
+    <string name="new_password">Mật khẩu mới</string>
+    <string name="confirm_password">Xác nhận mật khẩu</string>
+    <string name="passwords_do_not_match">Mật khẩu không khớp</string>
+
+    <!-- ── Cài đặt ứng dụng ── -->
+    <string name="settings_title">Cài đặt ứng dụng</string>
+    <string name="theme_mode">Giao diện sáng tối</string>
+    <string name="theme_system">Hiện hành theo máy</string>
+    <string name="theme_light">Sáng</string>
+    <string name="theme_dark">Tối</string>
+    <string name="language">Ngôn ngữ</string>
+    <string name="language_vi">Tiếng Việt</string>
+    <string name="language_en">English</string>
+
+    <!-- ── Xác thực ── -->
+    <string name="welcome_message">Chào mừng bạn đến với OneOrder</string>
+    <string name="remember_me">Ghi nhớ đăng nhập</string>
+    <string name="login">Đăng nhập</string>
+    <string name="dont_have_account_register">Chưa có tài khoản? Đăng ký ngay</string>
+    <string name="create_account">Tạo tài khoản</string>
+    <string name="back_to_login">Quay lại đăng nhập</string>
+    <string name="register">Đăng ký</string>
+    <string name="email">Email</string>
+    <string name="password">Mật khẩu</string>
+    <string name="registration_success">Đăng ký thành công!</string>
+
+    <!-- ── Trang chủ / Thực đơn ── -->
+    <string name="loading">Đang tải…</string>
+    <string name="error_prefix">Lỗi: </string>
+    <string name="back">Quay lại</string>
+    <string name="welcome_oneorder">Chào mừng đến với OneOrder!</string>
+    <string name="scan_qr_prompt">Vui lòng quét mã QR của nhà hàng để xem thực đơn và đặt món</string>
+    <string name="scan_qr">Quét mã QR</string>
+    <string name="table_label">Bàn: %s</string>
+    <string name="categories">Danh mục</string>
+    <string name="add">Thêm</string>
+    <string name="add_to_cart">Thêm vào giỏ hàng</string>
+    <string name="quantity">Số lượng:</string>
+    <string name="note_optional">Ghi chú (tùy chọn)</string>
+    <string name="note_placeholder">VD: Không hành, ít đường…</string>
+    <string name="add_to_cart_confirm">Thêm vào giỏ</string>
+    <string name="decrease">Giảm</string>
+    <string name="increase">Tăng</string>
+
+    <!-- ── Giỏ hàng ── -->
+    <string name="cart_title">Giỏ hàng</string>
+    <string name="cart_empty">Giỏ hàng trống</string>
+    <string name="cart_empty_hint">Thêm món từ thực đơn để bắt đầu</string>
+    <string name="total">Tổng tiền:</string>
+    <string name="subtotal">Tổng: %s</string>
+    <string name="proceed_checkout">Tiến hành thanh toán</string>
+    <string name="remove">Xóa</string>
+
+    <!-- ── Thanh toán ── -->
+    <string name="checkout_title">Thanh toán</string>
+    <string name="confirm_order">Xác nhận đơn hàng</string>
+    <string name="payment_method_cash">Phương thức: Tiền mặt (Mặc định)</string>
+    <string name="placing_order">Đang đặt hàng…</string>
+    <string name="pay_and_place_order">Đặt &amp; Thanh toán</string>
+    <string name="try_again">Thử lại</string>
+
+    <!-- ── Đơn hàng ── -->
+    <string name="orders_title">Đơn hàng của tôi</string>
+    <string name="search_orders">Tìm kiếm đơn hàng</string>
+    <string name="filter_all">Tất cả</string>
+    <string name="no_orders">Không có đơn hàng nào</string>
+    <string name="no_orders_hint">Lịch sử đơn hàng của bạn sẽ hiển thị ở đây</string>
+    <string name="order_prefix">Đơn #%s</string>
+    <string name="order_total">Tổng: %s</string>
+    <string name="order_detail_title">Chi tiết đơn hàng</string>
+    <string name="order_code">Mã đơn: %s</string>
+    <string name="order_status_label">Trạng thái:</string>
+    <string name="payment_status_label">Thanh toán:</string>
+    <string name="order_time_label">Thời gian: %s</string>
+    <string name="items_ordered">Món đã đặt</string>
+    <string name="grand_total">Tổng cộng:</string>
+    <string name="quantity_label">Số lượng: %d</string>
+    <string name="note_label">Ghi chú: %s</string>
+    <!-- Trạng thái đơn hàng -->
+    <string name="status_pending">Chờ xác nhận</string>
+    <string name="status_preparing">Đang chuẩn bị</string>
+    <string name="status_served">Đã phục vụ</string>
+    <string name="status_paid">Đã thanh toán</string>
+    <string name="status_cancelled">Đã hủy</string>
+    <string name="status_completed">Hoàn thành</string>
+    <string name="payment_status_paid">Đã thanh toán</string>
+    <string name="payment_status_unpaid">Chưa thanh toán</string>
+
+    <!-- ── QR Scanner ── -->
+    <string name="scan_qr_title">Quét mã QR</string>
+    <string name="camera_permission_required">Cần quyền camera để quét mã QR</string>
+    <string name="grant_permission">Cấp quyền</string>
+    <string name="qr_position_hint">Đặt mã QR vào khung hình</string>
+    <string name="qr_processing">Đang xử lý…</string>
+
+    <!-- ── Thanh điều hướng ── -->
+    <string name="nav_menu">Thực đơn</string>
+    <string name="nav_cart">Giỏ hàng</string>
+    <string name="nav_orders">Đơn hàng</string>
+
+    <!-- ── Food Feed ── -->
+    <string name="feed_near_you">Gần bạn</string>
+    <string name="feed_nationwide">Toàn quốc</string>
+    <string name="feed_order_mode">Đặt món</string>
+    <string name="feed_profile">Hồ sơ</string>
+    <string name="feed_view_map">Xem bản đồ</string>
+    <string name="feed_see_more">Xem thêm ▼</string>
+    <string name="feed_collapse">Thu gọn ▲</string>
+    <string name="feed_share_text">Hãy xem món %s tuyệt ngon tại %s trên OneOrder!</string>
+    <string name="feed_follow">Theo dõi</string>
+    <string name="feed_no_image">Không có ảnh</string>
+    <string name="feed_km">%.1f km</string>
+    <string name="feed_share">Chia sẻ</string>
+    <string name="feed_comment">Bình luận</string>
+    <string name="feed_like">Thích</string>
+
+    <!-- ── Comment Bottom Sheet ── -->
+    <string name="comments_title">Bình luận</string>
+    <string name="comment_count">%d bình luận</string>
+    <string name="no_comments">Chưa có bình luận nào. Hãy là người đầu tiên!</string>
+    <string name="add_comment">Thêm bình luận…</string>
+    <string name="send">Gửi</string>
+
+    <!-- ── Restaurant Profile ── -->
+    <string name="restaurant_avatar">Ảnh nhà hàng</string>
+    <string name="stats_posts">Bài đăng</string>
+    <string name="stats_followers">Follower</string>
+    <string name="stats_likes">Thích</string>
+    <string name="restaurant_default_bio">Chuyên phục vụ món ăn ngon mỗi ngày!</string>
+    <string name="following">Đang theo dõi</string>
+    <string name="post_thumbnail">Ảnh thu nhỏ</string>
+</resources>

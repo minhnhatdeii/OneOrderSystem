@@ -2,19 +2,29 @@ package com.example.oneorder_sm.ui.screens.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.oneorder_sm.data.local.UserPreferencesManager
 import com.example.oneorder_sm.domain.repository.ProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
-    private val profileRepository: ProfileRepository
+    private val profileRepository: ProfileRepository,
+    private val userPreferencesManager: UserPreferencesManager
 ) : ViewModel() {
+    
+    val themeMode: StateFlow<String> = userPreferencesManager.themeMode
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "SYSTEM")
+        
+    val appLanguage: StateFlow<String> = userPreferencesManager.appLanguage
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "vi")
     
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
@@ -178,5 +188,58 @@ class ProfileViewModel @Inject constructor(
     
     fun clearSuccessMessage() {
         _uiState.update { it.copy(successMessage = null) }
+    }
+    
+    fun uploadAvatar(imageBytes: ByteArray, extension: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            val result = profileRepository.uploadAvatar(imageBytes, extension)
+            if (result.isSuccess) {
+                _uiState.update { it.copy(isLoading = false, successMessage = "Avatar updated successfully") }
+                loadProfile() // refresh
+            } else {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = "Failed to upload avatar: ${result.exceptionOrNull()?.message}"
+                    )
+                }
+            }
+        }
+    }
+    
+    fun showThemeDialog() {
+        _uiState.update { it.copy(showThemeDialog = true) }
+    }
+    
+    fun hideThemeDialog() {
+        _uiState.update { it.copy(showThemeDialog = false) }
+    }
+    
+    fun showLanguageDialog() {
+        _uiState.update { it.copy(showLanguageDialog = true) }
+    }
+    
+    fun hideLanguageDialog() {
+        _uiState.update { it.copy(showLanguageDialog = false) }
+    }
+    
+    fun setAppLanguage(languageCode: String) {
+        viewModelScope.launch {
+            userPreferencesManager.saveAppLanguage(languageCode)
+        }
+    }
+
+    fun setThemeMode(mode: String) {
+        viewModelScope.launch {
+            userPreferencesManager.saveThemeMode(mode)
+        }
+    }
+    
+    fun signOut() {
+        viewModelScope.launch {
+            profileRepository.signOut()
+            _uiState.update { it.copy(isSignedOut = true) }
+        }
     }
 }

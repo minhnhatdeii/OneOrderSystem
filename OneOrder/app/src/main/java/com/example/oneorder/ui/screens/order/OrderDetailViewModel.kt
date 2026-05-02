@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.oneorder.data.model.Order
 import com.example.oneorder.data.model.OrderItemWithDetails
+import com.example.oneorder.data.model.Restaurant
 import com.example.oneorder.data.repository.OrderRepository
+import com.example.oneorder.data.repository.RestaurantRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,13 +17,15 @@ import javax.inject.Inject
 data class OrderDetailState(
     val isLoading: Boolean = false,
     val order: Order? = null,
+    val restaurant: Restaurant? = null,
     val items: List<OrderItemWithDetails> = emptyList(),
     val error: String? = null
 )
 
 @HiltViewModel
 class OrderDetailViewModel @Inject constructor(
-    private val orderRepository: OrderRepository
+    private val orderRepository: OrderRepository,
+    private val restaurantRepository: RestaurantRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OrderDetailState())
@@ -37,8 +41,16 @@ class OrderDetailViewModel @Inject constructor(
                 val itemsResult = orderRepository.getOrderItems(orderId)
                 
                 if (orderResult.isSuccess && itemsResult.isSuccess) {
+                    val order = orderResult.getOrNull()
+                    var restaurant: Restaurant? = null
+                    if (order?.tenantId != null) {
+                        val restResult = restaurantRepository.getRestaurantById(order.tenantId)
+                        restaurant = restResult.getOrNull()
+                    }
+                    
                     _uiState.value = OrderDetailState(
-                        order = orderResult.getOrNull(),
+                        order = order,
+                        restaurant = restaurant,
                         items = itemsResult.getOrNull() ?: emptyList(),
                         isLoading = false
                     )

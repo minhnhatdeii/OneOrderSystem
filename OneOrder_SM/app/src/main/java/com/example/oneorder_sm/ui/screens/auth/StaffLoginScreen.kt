@@ -19,17 +19,31 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.oneorder_sm.R
+import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StaffLoginScreen(
     onNavigateBack: () -> Unit,
     onLoginSuccess: () -> Unit,
+    onNavigateToForgotPassword: () -> Unit = {},
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var rememberMe by remember { mutableStateOf(false) }
     val loginState by viewModel.loginState.collectAsState()
+
+    // Load saved credentials if available
+    LaunchedEffect(Unit) {
+        viewModel.getSavedCredentials().collectLatest { preferences ->
+            if (preferences.rememberMe && preferences.savedEmail.isNotBlank()) {
+                email = preferences.savedEmail
+                password = preferences.savedPassword
+                rememberMe = true
+            }
+        }
+    }
 
     LaunchedEffect(loginState.isSuccess, loginState.role) {
         if (loginState.isSuccess && (loginState.role == "staff" || loginState.role == "manager")) {
@@ -65,11 +79,10 @@ fun StaffLoginScreen(
 
             // Logo
             Image(
-                painter = painterResource(id = R.drawable.logo_oneorder),
+                painter = painterResource(id = R.drawable.logo_oo2),
                 contentDescription = "OneOrder Logo",
                 modifier = Modifier
                     .size(80.dp)
-                    .clip(RoundedCornerShape(12.dp))
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -83,7 +96,7 @@ fun StaffLoginScreen(
                     text = "One",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
-                    color = com.example.oneorder_sm.ui.theme.OneTextColor
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
                     text = "Order",
@@ -124,6 +137,38 @@ fun StaffLoginScreen(
                 singleLine = true
             )
 
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Remember me checkbox
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = rememberMe,
+                    onCheckedChange = { rememberMe = it }
+                )
+                Text(
+                    text = "Ghi nhớ đăng nhập",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            // Forgot password link
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(onClick = onNavigateToForgotPassword) {
+                    Text(
+                        text = "Quên mật khẩu?",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
             // Error message
             if (loginState.error != null) {
                 Spacer(modifier = Modifier.height(16.dp))
@@ -138,7 +183,7 @@ fun StaffLoginScreen(
 
             // Login button
             Button(
-                onClick = { viewModel.login(email, password) },
+                onClick = { viewModel.login(email, password, rememberMe) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),

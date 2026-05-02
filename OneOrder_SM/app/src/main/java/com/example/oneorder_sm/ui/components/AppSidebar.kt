@@ -46,11 +46,13 @@ fun AppSidebar(
         add(SidebarMenuItem("tables", "Quản lý bàn", Icons.Outlined.TableBar, Icons.Filled.TableBar))
         if (userRole == "manager") {
             add(SidebarMenuItem("menu", "Quản lý Menu", Icons.Outlined.RestaurantMenu, Icons.Filled.RestaurantMenu))
-            add(SidebarMenuItem("staff", "Nhân viên", Icons.Outlined.People, Icons.Filled.People))
-            add(SidebarMenuItem("settings", "Cài đặt", Icons.Outlined.Settings, Icons.Filled.Settings))
+            add(SidebarMenuItem("food_promotion", "Nhà hàng", Icons.Outlined.Storefront, Icons.Filled.Storefront))
+            add(SidebarMenuItem("staff", "Quản lý nhân viên", Icons.Outlined.People, Icons.Filled.People))
+        } else {
+            add(SidebarMenuItem("staff", "Chấm công", Icons.Outlined.AccessTime, Icons.Filled.AccessTime))
         }
         // Profile available for all users
-        add(SidebarMenuItem("profile", "Hồ sơ", Icons.Outlined.AccountCircle, Icons.Filled.AccountCircle))
+        add(SidebarMenuItem("profile", "Hồ sơ cá nhân", Icons.Outlined.AccountCircle, Icons.Filled.AccountCircle))
     }
 
     Column(

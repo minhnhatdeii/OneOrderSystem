@@ -119,4 +119,10 @@ dependencies {
     implementation(libs.androidxRoomKtx)
     implementation(libs.androidxRoomPaging)
     ksp(libs.androidxRoomCompiler)
+
+    // DataStore Preferences (lưu tài khoản ghi nhớ)
+    implementation(libs.androidx.datastore.preferences)
+
+    // Palette
+    implementation("androidx.palette:palette-ktx:1.0.0")
 }

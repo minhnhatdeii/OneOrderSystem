@@ -24,4 +24,17 @@ interface ProfileRepository {
         currentPassword: String,
         newPassword: String
     ): Result<Unit>
+    
+    /**
+     * Upload user avatar
+     */
+    suspend fun uploadAvatar(
+        imageBytes: ByteArray,
+        extension: String
+    ): Result<String>
+    
+    /**
+     * Sign out user
+     */
+    suspend fun signOut()
 }

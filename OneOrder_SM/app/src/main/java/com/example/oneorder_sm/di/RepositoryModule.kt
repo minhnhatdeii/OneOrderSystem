@@ -32,6 +32,12 @@ abstract class RepositoryModule {
 
     @Binds
     @Singleton
+    abstract fun bindFoodPostRepository(
+        foodPostRepositoryImpl: FoodPostRepositoryImpl
+    ): FoodPostRepository
+
+    @Binds
+    @Singleton
     abstract fun bindTableRepository(
         tableRepositoryImpl: TableRepositoryImpl
     ): TableRepository

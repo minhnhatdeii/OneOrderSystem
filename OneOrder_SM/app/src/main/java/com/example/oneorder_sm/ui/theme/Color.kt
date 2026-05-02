@@ -45,6 +45,7 @@ val SurfaceDark = Color(0xFF1A1C1E)
 val SurfaceVariantDark = Color(0xFF43474E)
 val OnBackgroundDark = Color(0xFFE2E2E6)
 val OnSurfaceDark = Color(0xFFE2E2E6)
+val OnSurfaceVariantDark = Color(0xFFC3C6CF)
 
 // Sidebar Colors
 val SidebarBackground = Color(0xFF1E2A3A)

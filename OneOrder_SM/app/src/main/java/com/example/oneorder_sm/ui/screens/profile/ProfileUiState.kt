@@ -21,5 +21,12 @@ data class ProfileUiState(
     val passwordError: String? = null,
     
     // Messages
-    val successMessage: String? = null
+    val successMessage: String? = null,
+    
+    // Settings & Navigation
+    val isSignedOut: Boolean = false,
+    val showThemeDialog: Boolean = false,
+    val showLanguageDialog: Boolean = false,
+    val themeMode: String = "SYSTEM",
+    val appLanguage: String = "vi"
 )

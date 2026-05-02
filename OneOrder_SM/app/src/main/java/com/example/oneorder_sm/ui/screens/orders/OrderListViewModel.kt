@@ -20,6 +20,10 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.example.oneorder_sm.domain.usecase.GetOrdersPagedUseCase
 import kotlinx.coroutines.flow.Flow
+import android.util.Log
+
+// Cache TTL: chỉ fetch lại nếu đã quá 60 giây từ lần cuối
+private const val CACHE_TTL_MS = 60_000L
 
 @HiltViewModel
 class OrderListViewModel @Inject constructor(
@@ -41,16 +45,37 @@ class OrderListViewModel @Inject constructor(
         subscribeToRealtimeUpdates()
     }
 
-    fun fetchOrders() {
+    /**
+     * Fetch orders — chỉ gọi network nếu cache hết hạn (> 60s) hoặc data trống.
+     * Truyền [forceRefresh] = true để bỏ qua cache (ví dụ pull-to-refresh).
+     */
+    fun fetchOrders(forceRefresh: Boolean = false) {
+        val now = System.currentTimeMillis()
+        val state = _uiState.value
+        val cacheExpired = (now - state.lastFetchedAt) > CACHE_TTL_MS
+        val hasNoData = state.orders.isEmpty()
+
+        if (!forceRefresh && !cacheExpired && !hasNoData) {
+            Log.d("OrderListVM", "Cache còn hiệu lực, bỏ qua fetch")
+            return
+        }
+
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             val result = getActiveOrdersUseCase()
             result.onSuccess { orders ->
-                _uiState.update { it.copy(isLoading = false, orders = orders, error = null) }
+                _uiState.update {
+                    it.copy(isLoading = false, orders = orders, error = null, lastFetchedAt = System.currentTimeMillis())
+                }
             }.onFailure { error ->
                 _uiState.update { it.copy(isLoading = false, error = error.message) }
             }
         }
+    }
+
+    /** Lưu tab đang chọn vào ViewModel để giữ state khi navigate back */
+    fun setSelectedTab(index: Int) {
+        _uiState.update { it.copy(selectedTabIndex = index) }
     }
 
     private fun subscribeToRealtimeUpdates() {
@@ -82,10 +107,17 @@ class OrderListViewModel @Inject constructor(
             }
         }
     }
-}
 
+    fun updateFilterDate(dateMillis: Long?) {
+        _uiState.update { it.copy(filterDateMillis = dateMillis) }
+    }
+}
 data class OrderListUiState(
     val orders: List<Order> = emptyList(),
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val filterDateMillis: Long? = null,
+    val selectedTabIndex: Int = 0,
+    /** Epoch millis của lần fetch thành công gần nhất — dùng cho cache TTL */
+    val lastFetchedAt: Long = 0L
 )

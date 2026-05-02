@@ -4,25 +4,28 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.example.oneorder_sm.data.model.Category
 import com.example.oneorder_sm.data.model.MenuItem
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -35,6 +38,7 @@ fun MenuManagementScreen(
     var showAddEditItemDialog by remember { mutableStateOf(false) }
     var showAddEditCategoryDialog by remember { mutableStateOf(false) }
     var selectedItem by remember { mutableStateOf<MenuItem?>(null) }
+    var categoryToEdit by remember { mutableStateOf<com.example.oneorder_sm.data.model.Category?>(null) }
 
     // Content only - no Scaffold/TopAppBar (handled by MainScreen)
     Box(modifier = Modifier.fillMaxSize()) {
@@ -70,8 +74,11 @@ fun MenuManagementScreen(
                         category = category,
                         isSelected = uiState.selectedCategory?.id == category.id,
                         onClick = { viewModel.selectCategory(category) },
-                        onLongClick = {
-                            // Show delete confirmation
+                        onEdit = {
+                            categoryToEdit = category
+                            showAddEditCategoryDialog = true
+                        },
+                        onDelete = {
                             viewModel.showDeleteCategoryDialog(category)
                         }
                     )
@@ -157,19 +164,19 @@ fun MenuManagementScreen(
         if (showAddEditItemDialog) {
             AddEditMenuItemDialog(
                 item = selectedItem,
-                categoryId = selectedItem?.categoryId ?: uiState.selectedCategory?.id ?: 0L,
+                categories = uiState.categories,
+                defaultCategoryId = selectedItem?.categoryId ?: uiState.selectedCategory?.id ?: 0L,
                 onDismiss = {
                     showAddEditItemDialog = false
                     selectedItem = null
                 },
-                onSave = { name, price, desc, imgBytes ->
-                    val categoryId = selectedItem?.categoryId ?: uiState.selectedCategory?.id ?: 0L
+                onSave = { name, price, desc, catId, imgBytes ->
                     viewModel.saveMenuItem(
                         selectedItem?.id,
                         name,
                         price,
                         desc,
-                        categoryId,
+                        catId,
                         imgBytes,
                         selectedItem?.imageUrl
                     )
@@ -182,13 +189,18 @@ fun MenuManagementScreen(
         // Add/Edit Category Dialog
         if (showAddEditCategoryDialog) {
             AddEditCategoryDialog(
-                onDismiss = { showAddEditCategoryDialog = false },
+                category = categoryToEdit,
+                onDismiss = {
+                    showAddEditCategoryDialog = false
+                    categoryToEdit = null
+                },
                 onSave = { name ->
                     viewModel.saveCategory(
-                        id = null,
+                        id = categoryToEdit?.id,
                         name = name
                     )
                     showAddEditCategoryDialog = false
+                    categoryToEdit = null
                 }
             )
         }
@@ -226,41 +238,81 @@ fun MenuManagementScreen(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CategoryChip(
-    category: com.example.oneorder_sm.data.model.Category,
+    category: Category,
     isSelected: Boolean,
     onClick: () -> Unit,
-    onLongClick: () -> Unit
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
 ) {
+    var showMenu by remember { mutableStateOf(false) }
+
+    val containerColor = if (isSelected)
+        MaterialTheme.colorScheme.primary
+    else
+        MaterialTheme.colorScheme.surfaceVariant
+
+    val contentColor = if (isSelected)
+        MaterialTheme.colorScheme.onPrimary
+    else
+        MaterialTheme.colorScheme.onSurfaceVariant
+
     Surface(
         onClick = onClick,
-        shape = FilterChipDefaults.shape,
-        color = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
-        tonalElevation = if (isSelected) 2.dp else 0.dp,
-        border = FilterChipDefaults.filterChipBorder(enabled = true, selected = isSelected)
+        shape = RoundedCornerShape(50),
+        color = containerColor,
+        tonalElevation = if (isSelected) 4.dp else 0.dp
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier = Modifier.padding(start = 14.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+            horizontalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             Text(
                 text = category.name,
-                style = MaterialTheme.typography.labelLarge
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal),
+                color = contentColor
             )
-            // Delete icon button (always visible for discoverability)
-            IconButton(
-                onClick = onLongClick,
-                modifier = Modifier.size(20.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Xóa danh mục",
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            Box {
+                IconButton(
+                    onClick = { showMenu = true },
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "Tùy chọn danh mục",
+                        modifier = Modifier.size(16.dp),
+                        tint = contentColor.copy(alpha = 0.8f)
+                    )
+                }
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Sửa danh mục") },
+                        leadingIcon = {
+                            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                        },
+                        onClick = {
+                            showMenu = false
+                            onEdit()
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Xóa danh mục", color = MaterialTheme.colorScheme.error) },
+                        leadingIcon = {
+                            Icon(Icons.Default.Delete, contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.error)
+                        },
+                        onClick = {
+                            showMenu = false
+                            onDelete()
+                        }
+                    )
+                }
             }
         }
     }
@@ -323,22 +375,32 @@ fun MenuItemRow(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEditMenuItemDialog(
     item: MenuItem?,
-    categoryId: Long,
+    categories: List<Category>,
+    defaultCategoryId: Long,
     onDismiss: () -> Unit,
-    onSave: (String, Double, String?, ByteArray?) -> Unit
+    onSave: (String, Double, String?, Long, ByteArray?) -> Unit
 ) {
     var name by remember { mutableStateOf(item?.name ?: "") }
     var priceStr by remember { mutableStateOf(item?.price?.toString() ?: "") }
     var description by remember { mutableStateOf(item?.description ?: "") }
     var imageUri by remember { mutableStateOf<Uri?>(null) }
+    var selectedCategoryId by remember {
+        mutableStateOf(item?.categoryId ?: defaultCategoryId)
+    }
+    var categoryDropdownExpanded by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         imageUri = uri
     }
+
+    val selectedCategoryName = categories.find { it.id == selectedCategoryId }?.name
+        ?: categories.firstOrNull()?.name
+        ?: "Chọn danh mục"
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -366,7 +428,39 @@ fun AddEditMenuItemDialog(
                     modifier = Modifier.fillMaxWidth(),
                     maxLines = 3
                 )
-                
+
+                // Category selector
+                ExposedDropdownMenuBox(
+                    expanded = categoryDropdownExpanded,
+                    onExpandedChange = { categoryDropdownExpanded = !categoryDropdownExpanded }
+                ) {
+                    OutlinedTextField(
+                        value = selectedCategoryName,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Danh mục") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryDropdownExpanded) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = categoryDropdownExpanded,
+                        onDismissRequest = { categoryDropdownExpanded = false }
+                    ) {
+                        categories.forEach { cat ->
+                            DropdownMenuItem(
+                                text = { Text(cat.name) },
+                                onClick = {
+                                    cat.id?.let { selectedCategoryId = it }
+                                    categoryDropdownExpanded = false
+                                },
+                                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                            )
+                        }
+                    }
+                }
+
                 // Image selection button with preview
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Button(
@@ -374,7 +468,7 @@ fun AddEditMenuItemDialog(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            if (imageUri != null) "✓ Đã chọn ảnh mới" 
+                            if (imageUri != null) "✓ Đã chọn ảnh mới"
                             else if (item?.imageUrl != null) "Thay đổi ảnh hiện tại"
                             else "Chọn ảnh món"
                         )
@@ -398,7 +492,7 @@ fun AddEditMenuItemDialog(
                     val bytes = imageUri?.let { uri ->
                         context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
                     }
-                    onSave(name, price, description, bytes)
+                    onSave(name, price, description, selectedCategoryId, bytes)
                 },
                 enabled = name.isNotBlank() && (priceStr.toDoubleOrNull() ?: 0.0) > 0
             ) {

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.oneorder_sm.data.model.OrderStatus
 import com.example.oneorder_sm.domain.repository.OrderRepository
+import com.example.oneorder_sm.domain.usecase.UpdateOrderNoteUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,7 +15,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class OrderDetailViewModel @Inject constructor(
-    private val orderRepository: OrderRepository
+    private val orderRepository: OrderRepository,
+    private val updateOrderNoteUseCase: UpdateOrderNoteUseCase
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(OrderDetailUiState())
@@ -64,6 +66,32 @@ class OrderDetailViewModel @Inject constructor(
                         it.copy(
                             isLoading = false,
                             error = error.message ?: "Failed to update status"
+                        )
+                    }
+                }
+        }
+    }
+
+    fun saveNote(orderId: String, note: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSavingNote = true, error = null) }
+            val noteToSave = note.trim().ifBlank { null }
+            updateOrderNoteUseCase(orderId, noteToSave)
+                .onSuccess {
+                    // Update local state immediately for instant feedback
+                    _uiState.update { state ->
+                        state.copy(
+                            isSavingNote = false,
+                            successMessage = "Đã lưu ghi chú",
+                            order = state.order?.copy(staffNote = noteToSave)
+                        )
+                    }
+                }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(
+                            isSavingNote = false,
+                            error = "Lưu ghi chú thất bại: ${error.message}"
                         )
                     }
                 }
