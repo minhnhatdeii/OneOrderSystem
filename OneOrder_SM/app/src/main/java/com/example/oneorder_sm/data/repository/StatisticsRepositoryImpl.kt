@@ -1,6 +1,8 @@
 package com.example.oneorder_sm.data.repository
 
 import com.example.oneorder_sm.data.model.DashboardSummary
+import com.example.oneorder_sm.data.model.Order
+import com.example.oneorder_sm.data.model.OrderStatus
 import com.example.oneorder_sm.data.model.OrderStatistic
 import com.example.oneorder_sm.data.model.PopularItem
 import com.example.oneorder_sm.domain.repository.StatisticsRepository
@@ -50,44 +52,66 @@ class StatisticsRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getDashboardSummary(): Result<DashboardSummary> {
-        val cacheKey = "dashboard"
-        val now = System.currentTimeMillis()
-        
-        // 1. Check Memory Cache
-        dashboardCache[cacheKey]?.let { entry ->
-            if (now - entry.timestamp < ttlMillis) return Result.success(entry.value)
-        }
+        // Query directly from orders and tables — avoids RPC return-type mismatch and stale cache
+        return try {
+            val vnZone = java.time.ZoneId.of("Asia/Ho_Chi_Minh")
+            val todayVn = java.time.LocalDate.now(vnZone)
 
-        // 2. Try Network
-        val networkResult = withResilience {
-            val result = postgrest.rpc("get_dashboard_summary")
-                .decodeSingle<DashboardSummary>()
-            result
-        }
-        
-        if (networkResult.isSuccess) {
-            val data = networkResult.getOrThrow()
-            // Update Caches
-            dashboardCache[cacheKey] = CacheEntry(data, now)
-            try {
-                statisticsDao.insertDashboardSummary(data.toEntity())
-            } catch (e: Exception) {
-                e.printStackTrace()
+            val allOrders = postgrest.from("orders")
+                .select()
+                .decodeList<Order>()
+
+            // Parse createdAt safely — DB can return ISO-8601 with offset (+07:00) or trailing Z
+            fun parseOrderDate(createdAt: String): java.time.LocalDate? = try {
+                java.time.OffsetDateTime.parse(createdAt)
+                    .atZoneSameInstant(vnZone)
+                    .toLocalDate()
+            } catch (_: Exception) {
+                try {
+                    java.time.Instant.parse(createdAt)
+                        .atZone(vnZone)
+                        .toLocalDate()
+                } catch (_: Exception) { null }
             }
-            return Result.success(data)
-        }
-        
-        // 3. Fallback to Local DB
-        try {
-            val localData = statisticsDao.getDashboardSummary()
-            if (localData != null) {
-                return Result.success(localData.toModel())
+
+            val todayRevenueOrders = allOrders.filter { order ->
+                parseOrderDate(order.createdAt) == todayVn &&
+                    order.status != OrderStatus.CANCELLED
             }
+
+            val todayRevenue = todayRevenueOrders.sumOf { it.totalAmount }
+            val todayOrderCount = allOrders.count { parseOrderDate(it.createdAt) == todayVn }
+            val activeOrderCount = allOrders.count { order ->
+                order.status == OrderStatus.PENDING ||
+                order.status == OrderStatus.CONFIRMED ||
+                order.status == OrderStatus.PREPARING ||
+                order.status == OrderStatus.SERVED
+            }
+
+            // Query total tables count from the tables table
+            val totalTablesCount = try {
+                postgrest.from("tables").select().decodeList<kotlinx.serialization.json.JsonObject>().size
+            } catch (_: Exception) { 0 }
+
+            val summary = DashboardSummary(
+                todayRevenue = todayRevenue,
+                todayOrders = todayOrderCount,
+                activeOrders = activeOrderCount,
+                occupiedTables = 0, // Will be recalculated in ViewModel from real-time active orders
+                totalTables = totalTablesCount,
+                totalStaff = 0
+            )
+
+            try { statisticsDao.insertDashboardSummary(summary.toEntity()) } catch (_: Exception) {}
+
+            Result.success(summary)
         } catch (e: Exception) {
-            e.printStackTrace()
+            try {
+                val localData = statisticsDao.getDashboardSummary()
+                if (localData != null) return Result.success(localData.toModel())
+            } catch (_: Exception) {}
+            Result.failure(e)
         }
-
-        return networkResult
     }
 
     override suspend fun getOrderStatistics(

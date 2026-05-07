@@ -99,9 +99,42 @@ class StaffManagementViewModel @Inject constructor(
     }
 
     fun fetchAllDataForMonth(month: Int, year: Int, staffList: List<Profile> = _uiState.value.staff) {
-        staffList.forEach { profile ->
-            fetchAttendance(profile.id, month, year)
-            fetchDailyNotes(profile.id, month, year)
+        if (staffList.isEmpty()) return
+        
+        viewModelScope.launch {
+            val staffIds = staffList.map { it.id }
+            
+            // Lấy tất cả attendance và notes trong 2 API calls thay vì N * 2 calls
+            launch {
+                staffRepository.getAllStaffAttendance(staffIds, month, year)
+                    .onSuccess { allAttendance ->
+                        val grouped = allAttendance.groupBy { it.staffId }
+                        _uiState.update { state ->
+                            val updatedMap = state.staffAttendance.toMutableMap()
+                            staffIds.forEach { id ->
+                                updatedMap[id] = grouped[id] ?: emptyList()
+                            }
+                            state.copy(staffAttendance = updatedMap)
+                        }
+                    }
+            }
+            
+            launch {
+                staffRepository.getAllDailyNotes(staffIds, month, year)
+                    .onSuccess { allNotes ->
+                        val grouped = allNotes.groupBy { it.staffId }
+                        _uiState.update { state ->
+                            val updatedMap = state.staffDailyNotes.toMutableMap()
+                            staffIds.forEach { id ->
+                                updatedMap[id] = grouped[id] ?: emptyList()
+                            }
+                            state.copy(staffDailyNotes = updatedMap)
+                        }
+                    }
+                    .onFailure { error ->
+                        Log.e(TAG, "getAllDailyNotes() FAILED", error)
+                    }
+            }
         }
     }
 

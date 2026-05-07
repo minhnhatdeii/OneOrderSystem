@@ -29,7 +29,8 @@ private data class StaffListItem(
     val email: String?,
     val is_active: Boolean,
     val created_at: String?,
-    val created_by_name: String?
+    val created_by_name: String?,
+    val avatar_url: String? = null
 )
 
 class StaffRepositoryImpl @Inject constructor(
@@ -55,7 +56,8 @@ class StaffRepositoryImpl @Inject constructor(
                     role = item.role,
                     phoneNumber = item.phone_number,
                     isActive = item.is_active,
-                    createdAt = item.created_at
+                    createdAt = item.created_at,
+                    avatarUrl = item.avatar_url
                 )
             }
             
@@ -235,6 +237,36 @@ class StaffRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun getAllStaffAttendance(
+        staffIds: List<String>,
+        month: Int,
+        year: Int
+    ): Result<List<Attendance>> {
+        return try {
+            if (staffIds.isEmpty()) return Result.success(emptyList())
+
+            val startDate = String.format("%04d-%02d-01", year, month)
+            val nextMonth = if (month == 12) 1 else month + 1
+            val nextYear = if (month == 12) year + 1 else year
+            val endDate = String.format("%04d-%02d-01", nextYear, nextMonth)
+
+            val attendanceItems = supabase.postgrest.from("attendance")
+                .select(Columns.ALL) {
+                    filter {
+                        isIn("staff_id", staffIds)
+                        gte("attendance_date", startDate)
+                        lt("attendance_date", endDate)
+                    }
+                }
+                .decodeList<Attendance>()
+            
+            Result.success(attendanceItems)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+
     override suspend fun submitAttendance(
         staffId: String,
         date: String,
@@ -337,6 +369,32 @@ class StaffRepositoryImpl @Inject constructor(
                 .select(Columns.ALL) {
                     filter {
                         eq("staff_id", staffId)
+                        gte("note_date", startDate)
+                        lt("note_date", endDate)
+                    }
+                }
+                .decodeList<DailyNote>()
+
+            Result.success(notes)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun getAllDailyNotes(staffIds: List<String>, month: Int, year: Int): Result<List<DailyNote>> {
+        return try {
+            if (staffIds.isEmpty()) return Result.success(emptyList())
+
+            val startDate = String.format("%04d-%02d-01", year, month)
+            val nextMonth = if (month == 12) 1 else month + 1
+            val nextYear = if (month == 12) year + 1 else year
+            val endDate = String.format("%04d-%02d-01", nextYear, nextMonth)
+
+            val notes = supabase.postgrest.from("attendance_daily_notes")
+                .select(Columns.ALL) {
+                    filter {
+                        isIn("staff_id", staffIds)
                         gte("note_date", startDate)
                         lt("note_date", endDate)
                     }

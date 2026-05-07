@@ -43,20 +43,20 @@ DECLARE
     v_total_tables BIGINT;
     v_total_staff BIGINT;
 BEGIN
-    -- Calculate today's revenue (from PAID orders)
+    -- Calculate today's revenue (assuming upfront payment: count all except cancelled)
     SELECT COALESCE(SUM(total_amount), 0)
     INTO v_today_revenue
     FROM public.orders
     WHERE tenant_id = p_tenant_id
-    AND status = 'paid'
-    AND created_at::DATE = CURRENT_DATE;
+    AND status != 'cancelled'
+    AND (created_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::DATE = (now() AT TIME ZONE 'Asia/Ho_Chi_Minh')::DATE;
     
     -- Calculate today's total orders
     SELECT COUNT(*)
     INTO v_today_orders
     FROM public.orders
     WHERE tenant_id = p_tenant_id
-    AND created_at::DATE = CURRENT_DATE;
+    AND (created_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::DATE = (now() AT TIME ZONE 'Asia/Ho_Chi_Minh')::DATE;
     
     -- Calculate active orders (pending, confirmed, preparing)
     SELECT COUNT(*)

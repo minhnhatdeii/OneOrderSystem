@@ -78,6 +78,10 @@ class OrderRepositoryImpl @Inject constructor(
             supabaseClient.postgrest.from("orders").update(
                 {
                     set("status", status)
+                    // When marking as PAID, also update payment_status so revenue queries work
+                    if (status == OrderStatus.PAID) {
+                        set("payment_status", "paid")
+                    }
                 }
             ) {
                 filter {

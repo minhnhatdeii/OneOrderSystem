@@ -82,6 +82,7 @@ interactions.csv
 items.csv
 users.csv
 dataset_report.xlsx
+~$*.xlsx
 
 # Utility / Analysis scripts
 analyze_dataset.py

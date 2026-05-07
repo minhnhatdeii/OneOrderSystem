@@ -34,8 +34,8 @@ BEGIN
             SELECT COALESCE(SUM(total_amount), 0)
             FROM orders
             WHERE tenant_id = v_tenant_id
-            AND payment_status = 'paid'
-            AND DATE(created_at) = CURRENT_DATE
+            AND status != 'cancelled'
+            AND (created_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::DATE = (now() AT TIME ZONE 'Asia/Ho_Chi_Minh')::DATE
         ),
         'total_tables', (
             SELECT COUNT(*)

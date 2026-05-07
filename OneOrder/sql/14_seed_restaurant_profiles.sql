@@ -120,7 +120,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 7. Tạo view để join restaurant_profiles với food_posts (cho việc hiển thị posts grid)
-CREATE OR REPLACE VIEW restaurant_posts_view AS
+CREATE OR REPLACE VIEW restaurant_posts_view WITH (security_invoker = on) AS
 SELECT 
     rp.id as profile_id,
     rp.tenant_id,

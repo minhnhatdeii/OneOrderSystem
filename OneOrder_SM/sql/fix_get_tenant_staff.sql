@@ -2,6 +2,8 @@
 -- Issue: email column returns varchar(255) but function expects TEXT
 -- Solution: Cast u.email to TEXT
 
+DROP FUNCTION IF EXISTS public.get_tenant_staff();
+
 CREATE OR REPLACE FUNCTION public.get_tenant_staff()
 RETURNS TABLE (
     id UUID,
@@ -11,7 +13,8 @@ RETURNS TABLE (
     email TEXT,
     is_active BOOLEAN,
     created_at TIMESTAMPTZ,
-    created_by_name TEXT
+    created_by_name TEXT,
+    avatar_url TEXT
 ) AS $$
 DECLARE
     v_tenant_id UUID;
@@ -37,7 +40,8 @@ BEGIN
         u.email::TEXT,  -- CAST to TEXT to match return type
         p.is_active,
         p.created_at,
-        creator.full_name as created_by_name
+        creator.full_name as created_by_name,
+        p.avatar_url
     FROM public.profiles p
     JOIN auth.users u ON u.id = p.id
     LEFT JOIN public.profiles creator ON creator.id = p.created_by

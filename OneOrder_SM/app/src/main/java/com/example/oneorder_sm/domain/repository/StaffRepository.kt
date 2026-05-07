@@ -54,6 +54,8 @@ interface StaffRepository {
      */
     suspend fun getStaffAttendance(staffId: String, month: Int, year: Int): Result<List<Attendance>>
     
+    suspend fun getAllStaffAttendance(staffIds: List<String>, month: Int, year: Int): Result<List<Attendance>>
+    
     suspend fun submitAttendance(
         staffId: String,
         date: String,
@@ -82,6 +84,8 @@ interface StaffRepository {
      * Lấy ghi chú ngày công của một nhân viên trong một tháng.
      */
     suspend fun getDailyNotes(staffId: String, month: Int, year: Int): Result<List<DailyNote>>
+
+    suspend fun getAllDailyNotes(staffIds: List<String>, month: Int, year: Int): Result<List<DailyNote>>
 
     /**
      * Lưu (thêm mới hoặc cập nhật) ghi chú cho một ngày cụ thể.
