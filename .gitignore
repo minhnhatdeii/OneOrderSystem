@@ -112,3 +112,6 @@ OneOrder/out.txt
 
 # E2E Tests & Supabase config
 e2e_tests/
+
+# Web assets
+reset-password.html
