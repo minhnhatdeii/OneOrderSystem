@@ -502,7 +502,7 @@ private fun ProfileStatItem(label: String, value: String) {
 // EditRestaurantDialog has been removed since it is now its own screen (EditRestaurantProfileScreen.kt)
 
 @Composable
-private fun EmptyPromotionState(onAdd: () -> Unit) {
+internal fun EmptyPromotionState(onAdd: () -> Unit) {
     Box(
         modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp),
         contentAlignment = Alignment.Center
