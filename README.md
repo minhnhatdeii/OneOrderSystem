@@ -1,8 +1,8 @@
-# OneOrder System 🍔📱
+# OneOrder System 
 
 Chào mừng bạn đến với **OneOrder System** - Hệ thống quản lý và đặt món ăn toàn diện, được thiết kế để kết nối thực khách với các nhà hàng một cách liền mạch, đồng thời cung cấp công cụ quản lý mạnh mẽ cho chủ cửa hàng và nhân viên.
 
-## 🌟 Tổng quan
+##  Tổng quan
 
 OneOrder là một hệ sinh thái bao gồm 2 ứng dụng di động chính và một hệ thống backend mạnh mẽ, hướng tới việc hiện đại hóa trải nghiệm ăn uống và tối ưu hóa quy trình vận hành nhà hàng.
 
@@ -13,7 +13,7 @@ Hệ thống được chia thành 3 phần chính:
 
 ---
 
-## 📱 Các thành phần của hệ thống
+##  Các thành phần của hệ thống
 
 ### 1. OneOrder (Dành cho Thực khách)
 Ứng dụng mang đến trải nghiệm khám phá ẩm thực trực quan và cá nhân hóa.
@@ -37,7 +37,7 @@ Công cụ quản lý đa người dùng (Multi-tenant) giúp chủ cửa hàng 
 
 ---
 
-## 🛠 Công nghệ sử dụng
+##  Công nghệ sử dụng
 - **Nền tảng ứng dụng:** Android (Kotlin, Jetpack Compose)
 - **Kiến trúc:** Clean Architecture, MVVM
 - **Backend/Database:** Supabase, PostgreSQL
@@ -45,7 +45,7 @@ Công cụ quản lý đa người dùng (Multi-tenant) giúp chủ cửa hàng 
 
 ---
 
-## 🚀 Trải nghiệm hệ thống
+##  Trải nghiệm hệ thống
 
 Để trải nghiệm ứng dụng, bạn có thể clone repository này và build dự án trên Android Studio:
 
@@ -63,7 +63,7 @@ Công cụ quản lý đa người dùng (Multi-tenant) giúp chủ cửa hàng 
 
 ---
 
-## 🔒 Bảo mật và Quyền riêng tư
+##  Bảo mật và Quyền riêng tư
 Repository này chỉ chứa **mã nguồn nguyên bản** của ứng dụng. Các tệp tin cấu hình nhạy cảm (API Keys, Keystore), dữ liệu huấn luyện AI, kịch bản phân tích và các tài liệu nghiên cứu liên quan đã được đưa vào `.gitignore` để đảm bảo an toàn và tính bảo mật của dự án.
 
 ---
